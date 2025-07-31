@@ -145,16 +145,30 @@ async def parse_projects(limit: int = 5) -> None:
 
             # Prepare search documents
             for project in db_projects:
+                # Parse repository topics from JSON string
+                repository_topics = []
+                if repo.github_topics:
+                    try:
+                        repository_topics = json.loads(repo.github_topics)
+                    except (json.JSONDecodeError, TypeError):
+                        repository_topics = []
+
                 search_docs.append(
                     {
                         "id": project.id,
                         "name": project.name,
                         "description": project.description or "",
-                        "url": project.url or "",
-                        "github_url": project.github_url or "",
+                        "url": project.url,
+                        "github_url": project.github_url,
                         "category": project.category or "",
-                        "repository_name": repo.name,
+                        "github_stars": project.github_stars or 0,
+                        "github_language": project.github_language or "",
+                        "readme_excerpt": project.readme_excerpt or "",
                         "repository_id": repo.id,
+                        "repository_name": repo.name,
+                        "repository_topics": repository_topics,
+                        "created_at": project.created_at.isoformat() if project.created_at else None,
+                        "updated_at": project.updated_at.isoformat() if project.updated_at else None,
                     }
                 )
 
