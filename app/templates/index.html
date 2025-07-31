@@ -1,35 +1,44 @@
 {% extends "base.html" %}
 
-{% block title %}AwesomeIndex{% endblock %}
+{% block search %}
+    <form hx-get="/search" hx-target="#search-results" hx-trigger="input changed delay:300ms, submit"
+          hx-indicator="#loading">
+        <div class="search-box">
+            <input type="text" name="q" placeholder="Search awesome projects..." autocomplete="off" required
+                   class="search-input">
+            <button type="submit">Search</button>
+        </div>
+        <div class="filters">
+            <select name="repository" class="filter-select">
+                <option value="">All repositories</option>
+            </select>
+            <select name="category" class="filter-select">
+                <option value="">All categories</option>
+            </select>
+        </div>
+    </form>
+    <div id="loading" class="loading htmx-indicator">Searching...</div>
+{% endblock %}
 
 {% block content %}
-    <div class="homepage">
-        <h1>Search Awesome Projects</h1>
-        <p>Find curated open source projects from GitHub's awesome lists.</p>
-
-        <div id="search-results" class="search-results">
-            <!-- Results will be loaded here via HTMX -->
-        </div>
+    <div style="text-align: center; padding: 2rem 0;">
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Search Awesome Projects</h1>
+        <p style="color: #666; margin-bottom: 2rem;">Find curated open source projects from GitHub's awesome lists.</p>
     </div>
 
-    <style>
-        .homepage {
-            text-align: center;
-            padding: 2rem 0;
-        }
-
-        .homepage h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .homepage p {
-            color: #666;
-            margin-bottom: 2rem;
-        }
-
-        .search-results {
-            margin-top: 2rem;
-        }
-    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            ['categories', 'repositories'].forEach(type => {
+                fetch(`/api/projects/${type}/`).then(r => r.json()).then(data => {
+                    const select = document.querySelector(`select[name="${type === 'categories' ? 'category' : 'repository'}"]`);
+                    (data.categories || data).forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.name || item;
+                        option.textContent = item.name || item;
+                        select.appendChild(option);
+                    });
+                });
+            });
+        });
+    </script>
 {% endblock %}

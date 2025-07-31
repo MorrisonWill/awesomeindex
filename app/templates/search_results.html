@@ -1,79 +1,24 @@
 {% if results.hits %}
     <div class="results">
         <h2>{{ results.total }} projects found</h2>
-
         {% for project in results.hits %}
             <div class="project">
                 <h3>
-                    {% if project.url %}
-                        <a href="{{ project.url }}" target="_blank">{{ project.name }}</a>
-                    {% else %}
-                        {{ project.name }}
-                    {% endif %}
+                    {% if project.url %}<a href="{{ project.url }}" target="_blank">{{ project.name }}</a>
+                    {% else %}{{ project.name }}{% endif %}
                 </h3>
-
-                {% if project.description %}
-                    <p>{{ project.description }}</p>
-                {% endif %}
-
+                {% if project.description %}<p>{{ project.description }}</p>{% endif %}
                 <div class="meta">
-                    {% if project.github_stars %}★ {{ project.github_stars }}{% endif %}
-                    {% if project.github_language %}{{ project.github_language }}{% endif %}
-                    {% if project.category %}{{ project.category }}{% endif %}
+                    <span class="repository">{{ project.repository_name }}</span>
+                    {% if project.category and project.category != project.repository_name %}
+                        <span class="category">{{ project.category }}</span>{% endif %}
+                    {% if project.github_stars %}<span class="stars">★ {{ project.github_stars }}</span>{% endif %}
+                    {% if project.github_language %}
+                        <span class="language">{{ project.github_language }}</span>{% endif %}
                 </div>
             </div>
         {% endfor %}
     </div>
-
-    <style>
-        .results h2 {
-            margin-bottom: 1rem;
-            font-size: 1.2rem;
-        }
-
-        .project {
-            border-bottom: 1px solid #eee;
-            padding: 1rem 0;
-        }
-
-        .project h3 {
-            margin-bottom: 0.5rem;
-        }
-
-        .project h3 a {
-            color: #007bff;
-            text-decoration: none;
-        }
-
-        .project h3 a:hover {
-            text-decoration: underline;
-        }
-
-        .project p {
-            color: #666;
-            margin-bottom: 0.5rem;
-        }
-
-        .meta {
-            font-size: 0.9rem;
-            color: #888;
-        }
-
-        .meta > * {
-            margin-right: 1rem;
-        }
-    </style>
-
 {% else %}
-    <div class="no-results">
-        <p>No projects found. Try a different search term.</p>
-    </div>
-
-    <style>
-        .no-results {
-            text-align: center;
-            padding: 2rem;
-            color: #666;
-        }
-    </style>
+    <div class="no-results"><p>No projects found. Try a different search term.</p></div>
 {% endif %}
