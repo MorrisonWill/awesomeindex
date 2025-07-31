@@ -39,8 +39,10 @@
     </div>
 
     {% if results.has_more %}
-        <div hx-get="/browse?offset={{ next_offset }}&sort={{ filters.sort }}&repository={{ filters.repository }}&language={{ filters.language }}&category={{ filters.category }}&min_stars={{ filters.min_stars }}&topics={{ filters.topics }}"
+        <div id="load-more"
+             hx-get="/browse?offset={{ next_offset }}&sort={{ filters.sort }}&repository={{ filters.repository }}&language={{ filters.language }}&category={{ filters.category }}&min_stars={{ filters.min_stars }}&topics={{ filters.topics }}"
              hx-trigger="revealed"
+             hx-target="#load-more"
              hx-swap="outerHTML"
              style="text-align: center; padding: 2rem; color: var(--text-muted);">
             Loading more...

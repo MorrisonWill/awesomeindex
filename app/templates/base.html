@@ -151,6 +151,15 @@
             color: var(--text);
             font-size: 13px;
             font-family: inherit;
+            max-width: 200px;
+        }
+
+        .category-filter {
+            max-width: 150px;
+        }
+
+        .repository-filter {
+            max-width: 180px;
         }
 
         .filter-select:focus, .filter-input:focus {
@@ -186,6 +195,28 @@
 
         .filter-preset[data-preset="clear"] {
             color: var(--text-muted);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-select, .filter-input {
+                width: 100%;
+                max-width: none;
+            }
+
+            .filter-presets {
+                margin-left: 0;
+                margin-top: 0.5rem;
+            }
         }
 
         .loading {
@@ -289,7 +320,6 @@
 
     <main>
         {% block content %}{% endblock %}
-        <div id="search-results"></div>
     </main>
 </div>
 

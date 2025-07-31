@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block search %}
-    <form hx-get="/search" hx-target="#search-results"
-          hx-trigger="input changed delay:300ms from:.search-input, change from:.filter-select, change from:.filter-input"
-          hx-indicator=".loading" id="search-form">
+    <form id="search-form">
         <div class="search-box">
             <input type="text" name="q" placeholder="Search projects, tools, libraries..." autocomplete="off"
                    class="search-input" autofocus>
@@ -62,10 +60,10 @@
 {% endblock %}
 
 {% block content %}
-    <div id="loading" class="loading htmx-indicator">Searching...</div>
+    <div id="loading" class="loading htmx-indicator">Loading...</div>
 
-    <!-- Load initial projects on page load -->
-    <div id="browse-content" hx-get="/browse" hx-trigger="load" hx-swap="innerHTML" hx-include="#search-form">
+    <!-- Single content area for both search and browse -->
+    <div id="content" hx-get="/browse" hx-trigger="load" hx-swap="innerHTML">
         <div class="no-results" id="welcome">
             <h3>Search thousands of curated open source projects</h3>
             <p>Type to search across all GitHub awesome lists</p>
@@ -73,70 +71,62 @@
     </div>
 
     <script>
-        // Hide browse content when search results appear
-        const observer = new MutationObserver(() => {
-            const results = document.querySelector('#search-results');
-            const browse = document.querySelector('#browse-content');
-            if (results && results.innerHTML.trim()) {
-                browse.style.display = 'none';
-            } else {
-                browse.style.display = 'block';
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('#search-form');
+            const searchInput = document.querySelector('.search-input');
+            const content = document.querySelector('#content');
+            const loading = document.querySelector('#loading');
+
+            // Function to get form data
+            function getFormData() {
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+                return params.toString();
+            }
+
+            // Function to update content
+            function updateContent() {
+                const query = searchInput.value.trim();
+                const params = getFormData();
+                const url = query ? `/search?${params}` : `/browse?${params}`;
+
+                // Show loading
+                loading.style.display = 'block';
+
+                // Fetch content
+                htmx.ajax('GET', url, {
+                    target: '#content',
+                    swap: 'innerHTML'
+                }).then(() => {
+                    loading.style.display = 'none';
+                });
+            }
+
+            // Search input handler (with debounce)
+            let searchTimeout;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(updateContent, 300);
+            });
+
+            // Filter change handlers
+            form.querySelectorAll('.filter-select, .filter-input').forEach(el => {
+                el.addEventListener('change', updateContent);
+            });
+
+            // Clear filters button
+            document.querySelector('.filter-preset[data-preset="clear"]')?.addEventListener('click', () => {
+                form.reset();
+                form.querySelector('[name="sort"]').value = 'stars';
+                searchInput.value = '';
+                updateContent();
+            });
+
+            // Set default sort
+            const sortSelect = form.querySelector('[name="sort"]');
+            if (sortSelect && !searchInput.value) {
+                sortSelect.value = 'stars';
             }
         });
-        observer.observe(document.querySelector('#search-results'), {childList: true});
-
-        // Show browse content when search is cleared
-        const searchInput = document.querySelector('.search-input');
-        searchInput?.addEventListener('input', (e) => {
-            if (!e.target.value) {
-                document.querySelector('#search-results').innerHTML = '';
-                document.querySelector('#browse-content').style.display = 'block';
-            }
-        });
-
-        // Update browse results when filters change
-        document.querySelectorAll('.filter-select, .filter-input').forEach(el => {
-            el.addEventListener('change', () => {
-                const searchQuery = document.querySelector('.search-input').value;
-                if (!searchQuery) {
-                    // Reload browse results with new filters
-                    htmx.trigger('#browse-content', 'htmx:abort');
-                    htmx.ajax('GET', '/browse', {
-                        target: '#browse-content',
-                        swap: 'innerHTML',
-                        values: htmx.values('#search-form')
-                    });
-                }
-            });
-        });
-
-        // Set default sort for browse mode
-        const sortSelect = document.querySelector('select[name="sort"]');
-        if (sortSelect && !document.querySelector('.search-input').value) {
-            sortSelect.value = 'stars';
-        }
-
-        // Handle filter presets
-        document.querySelectorAll('.filter-preset').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const preset = btn.dataset.preset;
-                const form = document.querySelector('#search-form');
-
-                if (preset === 'clear') {
-                    // Clear all filters
-                    form.querySelector('[name="sort"]').value = 'stars';
-                    form.querySelector('[name="language"]').value = '';
-                    form.querySelector('[name="category"]').value = '';
-                    form.querySelector('[name="repository"]').value = '';
-                    form.querySelector('[name="min_stars"]').value = '0';
-                    form.querySelector('[name="topics"]').value = '';
-
-                    // Trigger update
-                    const event = new Event('change', {bubbles: true});
-                    form.querySelector('[name="sort"]').dispatchEvent(event);
-                }
-            )
-                ;
-            });
     </script>
 {% endblock %}

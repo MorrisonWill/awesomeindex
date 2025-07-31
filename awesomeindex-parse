@@ -7,6 +7,7 @@ import asyncio
 import sys
 import json
 from pathlib import Path
+from datetime import datetime
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -19,20 +20,49 @@ from app.internal.github import github_client
 from app.internal.parser import markdown_parser
 from app.internal.search import search_service
 
+CHECKPOINT_FILE = Path(__file__).parent / ".awesomeindex-parse-checkpoint.json"
+
+
+def load_checkpoint():
+    """Load checkpoint data"""
+    if CHECKPOINT_FILE.exists():
+        with open(CHECKPOINT_FILE, 'r') as f:
+            return json.load(f)
+    return {
+        "last_processed_repository": None,
+        "last_processed_repository_id": None,
+        "total_processed": 0,
+        "started_at": None,
+        "last_updated": None
+    }
+
+
+def save_checkpoint(checkpoint):
+    """Save checkpoint data"""
+    checkpoint["last_updated"] = datetime.now().isoformat()
+    with open(CHECKPOINT_FILE, 'w') as f:
+        json.dump(checkpoint, f, indent=2)
+
 
 async def main():
     """Parse and index projects from all repositories"""
     if len(sys.argv) > 1 and sys.argv[1] == "--help":
-        print("Usage: awesomeindex-parse [--repo NAME] [--limit N]")
+        print("Usage: awesomeindex-parse [--repo NAME] [--limit N] [--resume] [--reset]")
         print("\nParse projects from awesome repositories and index them.")
         print("\nOptions:")
         print("  --repo NAME    Parse only specific repository")
         print("  --limit N      Limit to first N repositories")
+        print("  --resume       Resume from last checkpoint")
+        print("  --reset        Clear checkpoint and start fresh")
+        print("  --status       Check rate limit status")
         sys.exit(0)
 
     # Parse arguments
     repo_name = None
     limit = None
+    resume = False
+    reset = False
+    check_status = False
 
     i = 1
     while i < len(sys.argv):
@@ -42,9 +72,41 @@ async def main():
         elif sys.argv[i] == "--limit" and i + 1 < len(sys.argv):
             limit = int(sys.argv[i + 1])
             i += 2
+        elif sys.argv[i] == "--resume":
+            resume = True
+            i += 1
+        elif sys.argv[i] == "--reset":
+            reset = True
+            i += 1
+        elif sys.argv[i] == "--status":
+            check_status = True
+            i += 1
         else:
             print(f"Error: Unknown option {sys.argv[i]}", file=sys.stderr)
             sys.exit(1)
+    
+    # Check rate limit status
+    if check_status:
+        status = await github_client.check_rate_limit()
+        print(f"GitHub API Rate Limit Status:")
+        print(f"  Limit: {status.get('limit', 'Unknown')}")
+        print(f"  Remaining: {status.get('remaining', 'Unknown')}")
+        print(f"  Reset: {status.get('reset_datetime', 'Unknown')}")
+        await github_client.close()
+        sys.exit(0)
+    
+    # Load or reset checkpoint
+    checkpoint = load_checkpoint() if resume and not reset else {
+        "last_processed_repository": None,
+        "last_processed_repository_id": None,
+        "total_processed": 0,
+        "started_at": datetime.now().isoformat(),
+        "last_updated": None
+    }
+    
+    if reset and CHECKPOINT_FILE.exists():
+        CHECKPOINT_FILE.unlink()
+        print("Checkpoint cleared.")
 
     await search_service.initialize()
 
@@ -60,11 +122,28 @@ async def main():
         if not repos:
             print("No repositories found")
             sys.exit(1)
+        
+        # Skip repositories if resuming
+        skip_mode = False
+        if resume and checkpoint["last_processed_repository_id"]:
+            skip_mode = True
+            print(f"Resuming from checkpoint. Last processed: {checkpoint['last_processed_repository']}")
+            print(f"Total processed so far: {checkpoint['total_processed']}")
 
-        total_projects = 0
+        total_projects = checkpoint.get("total_processed", 0)
 
         for repo in repos:
-            print(f"Processing {repo.name}...")
+            # Skip if we haven't reached the last processed repository yet
+            if skip_mode:
+                if repo.id == checkpoint["last_processed_repository_id"]:
+                    skip_mode = False
+                    print(f"Found checkpoint repository: {repo.name}, continuing from next...")
+                    continue
+                else:
+                    print(f"Skipping already processed: {repo.name}")
+                    continue
+            
+            print(f"\nProcessing {repo.name}...")
 
             readme = await github_client.get_readme_content(repo.full_name)
             if not readme:
@@ -95,20 +174,26 @@ async def main():
                     category=p.category,
                 )
 
-                # Enrich GitHub projects
+                # Enrich GitHub projects with better rate limit handling
                 if p.url and "github.com" in p.url:
                     github_repo = markdown_parser.extract_github_repo_name(p.url)
                     if github_repo:
                         try:
-                            data = await github_client.get_repository(github_repo)
-                            if data:
-                                project.github_stars = data.get("stargazers_count", 0)
-                                project.github_language = data.get("language", "")
-                                project.github_topics = json.dumps(
-                                    data.get("topics", [])
-                                )
-                            await asyncio.sleep(0.2)
-                        except Exception:
+                            # Check rate limit before making request
+                            if github_client.rate_limit_remaining is not None and github_client.rate_limit_remaining < 10:
+                                print(f"  ⚠ Low rate limit ({github_client.rate_limit_remaining} remaining), skipping enrichment")
+                            else:
+                                data = await github_client.get_repository(github_repo)
+                                if data:
+                                    project.github_stars = data.get("stargazers_count", 0)
+                                    project.github_language = data.get("language", "")
+                                    project.github_topics = json.dumps(
+                                        data.get("topics", [])
+                                    )
+                                # Add delay to avoid hitting rate limits
+                                await asyncio.sleep(0.5)
+                        except Exception as e:
+                            print(f"  ⚠ Error enriching {github_repo}: {str(e)}")
                             pass
 
                 session.add(project)
@@ -160,8 +245,22 @@ async def main():
             await search_service.index_projects(search_docs)
             print(f"  ✓ Indexed {len(db_projects)} projects")
             total_projects += len(db_projects)
+            
+            # Save checkpoint after each repository
+            checkpoint["last_processed_repository"] = repo.name
+            checkpoint["last_processed_repository_id"] = repo.id
+            checkpoint["total_processed"] = total_projects
+            save_checkpoint(checkpoint)
+            print(f"  ✓ Checkpoint saved")
 
     print(f"\nTotal: {total_projects} projects indexed")
+    
+    # Clear checkpoint on successful completion
+    if not repo_name:  # Only clear if processing all repositories
+        if CHECKPOINT_FILE.exists():
+            CHECKPOINT_FILE.unlink()
+            print("✓ Checkpoint cleared (all repositories processed)")
+    
     await github_client.close()
 
 

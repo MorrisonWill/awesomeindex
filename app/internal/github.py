@@ -2,6 +2,9 @@ from typing import Optional, List, Dict, Any
 import httpx
 import json
 import re
+import asyncio
+import time
+from datetime import datetime
 from app.config import settings
 
 
@@ -12,6 +15,8 @@ class GitHubClient:
         self.base_url = "https://api.github.com"
         self.token = settings.github_token
         self.client = httpx.AsyncClient(headers=self._get_headers(), timeout=30.0)
+        self.rate_limit_remaining = None
+        self.rate_limit_reset = None
 
     def _get_headers(self) -> Dict[str, str]:
         headers = {
@@ -22,14 +27,61 @@ class GitHubClient:
             headers["Authorization"] = f"token {self.token}"
         return headers
 
+    def _update_rate_limit(self, response: httpx.Response):
+        """Update rate limit information from response headers"""
+        headers = response.headers
+        if "x-ratelimit-remaining" in headers:
+            self.rate_limit_remaining = int(headers["x-ratelimit-remaining"])
+        if "x-ratelimit-reset" in headers:
+            self.rate_limit_reset = int(headers["x-ratelimit-reset"])
+
+    async def _handle_rate_limit(self, response: httpx.Response):
+        """Handle rate limit errors and wait if necessary"""
+        if response.status_code == 403 and "x-ratelimit-remaining" in response.headers:
+            if int(response.headers["x-ratelimit-remaining"]) == 0:
+                reset_time = int(response.headers.get("x-ratelimit-reset", 0))
+                if reset_time:
+                    wait_time = reset_time - int(time.time()) + 1
+                    if wait_time > 0:
+                        print(f"Rate limit exceeded. Waiting {wait_time} seconds until reset...")
+                        await asyncio.sleep(wait_time)
+                        return True
+        return False
+
+    async def check_rate_limit(self) -> Dict[str, Any]:
+        """Check current rate limit status"""
+        try:
+            response = await self.client.get(f"{self.base_url}/rate_limit")
+            response.raise_for_status()
+            data = response.json()
+            core_limits = data.get("rate", {})
+            return {
+                "limit": core_limits.get("limit", 0),
+                "remaining": core_limits.get("remaining", 0),
+                "reset": core_limits.get("reset", 0),
+                "reset_datetime": datetime.fromtimestamp(core_limits.get("reset", 0)).isoformat()
+            }
+        except httpx.HTTPError:
+            return {}
+
     async def get_repository(self, full_name: str) -> Optional[Dict[str, Any]]:
         """Get repository metadata from GitHub API"""
-        try:
-            response = await self.client.get(f"{self.base_url}/repos/{full_name}")
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPError:
-            return None
+        for retry in range(3):
+            try:
+                response = await self.client.get(f"{self.base_url}/repos/{full_name}")
+                self._update_rate_limit(response)
+                
+                if await self._handle_rate_limit(response):
+                    continue
+                    
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPError as e:
+                if retry < 2:
+                    await asyncio.sleep(1)
+                    continue
+                return None
+        return None
 
     async def search_awesome_repositories(
         self, limit: int = 100
@@ -53,20 +105,30 @@ class GitHubClient:
 
     async def get_readme_content(self, full_name: str) -> Optional[str]:
         """Get README content from repository"""
-        try:
-            response = await self.client.get(
-                f"{self.base_url}/repos/{full_name}/readme"
-            )
-            response.raise_for_status()
-            readme_data = response.json()
+        for retry in range(3):
+            try:
+                response = await self.client.get(
+                    f"{self.base_url}/repos/{full_name}/readme"
+                )
+                self._update_rate_limit(response)
+                
+                if await self._handle_rate_limit(response):
+                    continue
+                    
+                response.raise_for_status()
+                readme_data = response.json()
 
-            # Get raw content
-            content_response = await self.client.get(readme_data["download_url"])
-            content_response.raise_for_status()
-            return content_response.text
-        except httpx.HTTPError:
-            print(f"Error fetching README for {full_name}: {response.text}")
-            return None
+                # Get raw content
+                content_response = await self.client.get(readme_data["download_url"])
+                content_response.raise_for_status()
+                return content_response.text
+            except httpx.HTTPError as e:
+                if retry < 2:
+                    await asyncio.sleep(1)
+                    continue
+                print(f"Error fetching README for {full_name}: {str(e)}")
+                return None
+        return None
 
     async def get_repository_metadata(self, full_name: str) -> Optional[Dict[str, Any]]:
         """Get comprehensive repository metadata including stars, language, topics"""

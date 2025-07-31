@@ -17,3 +17,6 @@ wheels/
 
 # Meilisearch
 data.ms/
+
+# Checkpoint files
+.awesomeindex-parse-checkpoint.json
