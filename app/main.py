@@ -45,7 +45,7 @@ async def homepage(request: Request):
 async def browse_projects(
     request: Request,
     offset: int = 0,
-    limit: int = 20,
+    limit: int = 50,
     sort: str = "stars",
     repository: str = "",
     language: str = "",
@@ -55,11 +55,13 @@ async def browse_projects(
     """Browse all projects with infinite scroll"""
     with Session(engine) as session:
         statement = select(Project)
-        
+
         # Apply filters
         if repository:
             # Get repository by name
-            repo = session.exec(select(Repository).where(Repository.name == repository)).first()
+            repo = session.exec(
+                select(Repository).where(Repository.name == repository)
+            ).first()
             if repo:
                 statement = statement.where(Project.repository_id == repo.id)
         if category:
@@ -68,7 +70,7 @@ async def browse_projects(
             statement = statement.where(Project.github_language == language)
         if min_stars > 0:
             statement = statement.where(Project.github_stars >= min_stars)
-            
+
         # Apply sorting
         if sort == "stars":
             statement = statement.order_by(Project.github_stars.desc())
@@ -76,19 +78,19 @@ async def browse_projects(
             statement = statement.order_by(Project.updated_at.desc())
         elif sort == "name":
             statement = statement.order_by(Project.name)
-            
+
         statement = statement.offset(offset).limit(limit + 1)
         projects = session.exec(statement).all()
-        
+
         has_more = len(projects) > limit
         projects = projects[:limit]
-        
+
         # Convert to search result format for reuse of template
         hits = []
         for project in projects:
             # Get repository name
             repo = session.get(Repository, project.repository_id)
-            
+
             # Parse topics from JSON
             topics = []
             if project.github_topics:
@@ -96,49 +98,55 @@ async def browse_projects(
                     topics = json.loads(project.github_topics)
                 except:
                     pass
-                    
-            hits.append({
-                "id": project.id,
-                "name": project.name,
-                "description": project.description,
-                "url": project.url,
-                "category": project.category,
-                "github_stars": project.github_stars,
-                "github_language": project.github_language,
-                "github_topics": topics,
-                "repository_name": repo.name if repo else "",
-            })
-        
+
+            hits.append(
+                {
+                    "id": project.id,
+                    "name": project.name,
+                    "description": project.description,
+                    "url": project.url,
+                    "category": project.category,
+                    "github_stars": project.github_stars,
+                    "github_language": project.github_language,
+                    "github_topics": topics,
+                    "repository_name": repo.name if repo else "",
+                }
+            )
+
         # Get total count for display
         count_statement = select(func.count(Project.id))
         if repository:
-            repo = session.exec(select(Repository).where(Repository.name == repository)).first()
+            repo = session.exec(
+                select(Repository).where(Repository.name == repository)
+            ).first()
             if repo:
-                count_statement = count_statement.where(Project.repository_id == repo.id)
+                count_statement = count_statement.where(
+                    Project.repository_id == repo.id
+                )
         if category:
             count_statement = count_statement.where(Project.category == category)
         if language:
             count_statement = count_statement.where(Project.github_language == language)
         if min_stars > 0:
             count_statement = count_statement.where(Project.github_stars >= min_stars)
-        
+
         total_count = session.exec(count_statement).one()
-        
+
         results = {
             "hits": hits,
             "total": total_count,
             "offset": offset,
             "has_more": has_more,
         }
-        
+
         # Use different template for infinite scroll continuation
         template_name = "browse_more.html" if offset > 0 else "browse_results.html"
-        
+
         return templates.TemplateResponse(
-            template_name, 
+            template_name,
             {
-                "request": request, 
-                "results": results, 
+                "request": request,
+                "results": results,
                 "next_offset": offset + limit,
                 "filters": {
                     "sort": sort,
@@ -146,8 +154,8 @@ async def browse_projects(
                     "language": language,
                     "category": category,
                     "min_stars": min_stars,
-                }
-            }
+                },
+            },
         )
 
 
@@ -160,12 +168,12 @@ async def search_frontend(
     sort: str = "relevance",
     language: str = "",
     min_stars: int = 0,
-    limit: int = 20,
+    limit: int = 50,
     offset: int = 0,
 ):
     """Frontend search endpoint that returns HTML"""
     from app.routers.search import build_filters
-    
+
     # Build filter string for MeiliSearch
     filters = []
     if category:
@@ -176,10 +184,9 @@ async def search_frontend(
         filters.append(f"github_language = '{language}'")
     if min_stars > 0:
         filters.append(f"github_stars >= {min_stars}")
-    
-    
+
     filter_string = " AND ".join(filters) if filters else None
-    
+
     # Prepare sort parameter for MeiliSearch
     sort_param = None
     if sort == "stars":
@@ -188,7 +195,7 @@ async def search_frontend(
         sort_param = ["updated_at:desc"]
     elif sort == "name":
         sort_param = ["name:asc"]
-    
+
     try:
         results = await search_service.search_projects(
             query=q,
@@ -197,19 +204,19 @@ async def search_frontend(
             limit=limit + 1,  # Get one extra to check if there are more
             offset=offset,
         )
-        
+
         # Check if there are more results
         has_more = len(results["hits"]) > limit
         results["hits"] = results["hits"][:limit]
         results["has_more"] = has_more
-        
+
         # Use different template for infinite scroll continuation
         template_name = "search_more.html" if offset > 0 else "search_results.html"
-        
+
         return templates.TemplateResponse(
-            template_name, 
+            template_name,
             {
-                "request": request, 
+                "request": request,
                 "results": results,
                 "query": q,
                 "next_offset": offset + limit,
@@ -219,13 +226,13 @@ async def search_frontend(
                     "language": language,
                     "category": category,
                     "min_stars": min_stars,
-                }
-            }
+                },
+            },
         )
     except Exception as e:
         return templates.TemplateResponse(
             "search_results.html",
-            {"request": request, "results": {"hits": [], "total": 0}, "error": str(e)}
+            {"request": request, "results": {"hits": [], "total": 0}, "error": str(e)},
         )
 
 

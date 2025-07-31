@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""
+awesomeindex-reindex - Reindex all projects in MeiliSearch from database
+"""
+
+import asyncio
+import sys
+import json
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from sqlmodel import Session, select
+from app.database import engine
+from app.models.repository import Repository
+from app.models.project import Project
+from app.internal.search import search_service
+
+
+async def main():
+    """Reindex all projects from database to MeiliSearch"""
+    if len(sys.argv) > 1 and sys.argv[1] == "--help":
+        print("Usage: awesomeindex-reindex [--clear-only]")
+        print("\nReindex all projects from database to MeiliSearch.")
+        print("\nOptions:")
+        print("  --clear-only    Only clear the index without reindexing")
+        sys.exit(0)
+
+    clear_only = len(sys.argv) > 1 and sys.argv[1] == "--clear-only"
+
+    print("Initializing search service...")
+    await search_service.initialize()
+
+    if clear_only:
+        print("Clearing search index...")
+        await search_service.clear_index()
+        print("✓ Index cleared")
+        return
+
+    print("Loading projects from database...")
+
+    with Session(engine) as session:
+        # Get all projects with their repositories
+        projects = session.exec(select(Project).order_by(Project.repository_id)).all()
+
+        if not projects:
+            print("No projects found in database")
+            return
+
+        print(f"Found {len(projects)} projects")
+
+        # Get all repositories for efficient lookup
+        repositories = {
+            repo.id: repo for repo in session.exec(select(Repository)).all()
+        }
+
+        # Prepare search documents
+        search_docs = []
+        for project in projects:
+            repo = repositories.get(project.repository_id)
+            if not repo:
+                print(f"Warning: No repository found for project {project.name}")
+                continue
+
+            project_topics = []
+            if project.github_topics:
+                try:
+                    project_topics = json.loads(project.github_topics)
+                except:
+                    pass
+
+            repo_topics = []
+            if repo.github_topics:
+                try:
+                    repo_topics = json.loads(repo.github_topics)
+                except:
+                    pass
+
+            search_docs.append(
+                {
+                    "id": project.id,
+                    "name": project.name,
+                    "description": project.description or "",
+                    "url": project.url,
+                    "github_url": project.url
+                    if project.url and "github.com" in project.url
+                    else None,
+                    "category": project.category or "",
+                    "github_stars": project.github_stars or 0,
+                    "github_language": project.github_language or "",
+                    "github_topics": project_topics,
+                    "repository_id": repo.id,
+                    "repository_name": repo.name,
+                    "repository_topics": repo_topics,
+                    "created_at": project.created_at.isoformat()
+                    if project.created_at
+                    else None,
+                    "updated_at": project.updated_at.isoformat()
+                    if project.updated_at
+                    else None,
+                }
+            )
+
+        print(f"Prepared {len(search_docs)} documents for indexing")
+
+        # Clear existing index
+        print("Clearing existing index...")
+        await search_service.clear_index()
+
+        # Reindex all projects
+        print("Indexing projects...")
+        await search_service.index_projects(search_docs)
+
+        # Get stats to verify
+        stats = await search_service.get_stats()
+        print(
+            f"\n✓ Successfully reindexed {stats.get('totalDocuments', 'unknown')} projects"
+        )
+
+        # Print some statistics
+        repo_counts = {}
+        for doc in search_docs:
+            repo_name = doc["repository_name"]
+            repo_counts[repo_name] = repo_counts.get(repo_name, 0) + 1
+
+        print(f"\nProjects by repository:")
+        for repo_name, count in sorted(
+            repo_counts.items(), key=lambda x: x[1], reverse=True
+        )[:10]:
+            print(f"  {repo_name}: {count}")
+
+        if len(repo_counts) > 10:
+            print(f"  ... and {len(repo_counts) - 10} more repositories")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

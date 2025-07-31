@@ -61,7 +61,7 @@ class SearchService:
         query: str,
         filters: Optional[str] = None,
         sort: Optional[List[str]] = None,
-        limit: int = 20,
+        limit: int = 50,
         offset: int = 0,
     ) -> Dict[str, Any]:
         """Search projects with optional filters"""
@@ -76,7 +76,7 @@ class SearchService:
 
             if filters:
                 search_params["filter"] = filters
-                
+
             if sort:
                 search_params["sort"] = sort
 
