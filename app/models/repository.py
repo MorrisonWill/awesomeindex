@@ -18,6 +18,7 @@ class Repository(SQLModel, table=True):
 
     # GitHub metadata
     stars: Optional[int] = None
+    github_topics: Optional[str] = None  # JSON string of topics array
 
     # Sync tracking
     is_active: bool = True

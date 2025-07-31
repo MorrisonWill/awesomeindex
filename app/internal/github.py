@@ -1,5 +1,7 @@
 from typing import Optional, List, Dict, Any
 import httpx
+import json
+import re
 from app.config import settings
 
 
@@ -65,6 +67,60 @@ class GitHubClient:
         except httpx.HTTPError:
             print(f"Error fetching README for {full_name}: {response.text}")
             return None
+
+    async def get_repository_metadata(self, full_name: str) -> Optional[Dict[str, Any]]:
+        """Get comprehensive repository metadata including stars, language, topics"""
+        repo_data = await self.get_repository(full_name)
+        if not repo_data:
+            return None
+
+        return {
+            "stars": repo_data.get("stargazers_count", 0),
+            "language": repo_data.get("language"),
+            "topics": repo_data.get("topics", []),
+            "updated_at": repo_data.get("updated_at"),
+        }
+
+    async def get_readme_excerpt(
+        self, full_name: str, max_chars: int = 200
+    ) -> Optional[str]:
+        """Get README excerpt - first meaningful paragraph"""
+        readme_content = await self.get_readme_content(full_name)
+        if not readme_content:
+            return None
+
+        # Remove title and badges, find first meaningful paragraph
+        lines = readme_content.split("\n")
+        excerpt_lines = []
+
+        for line in lines:
+            line = line.strip()
+            # Skip empty lines, titles, badges, and code blocks
+            if (
+                not line
+                or line.startswith("#")
+                or line.startswith("![")
+                or line.startswith("[![")
+                or line.startswith("```")
+                or line.startswith("---")
+            ):
+                continue
+
+            excerpt_lines.append(line)
+            excerpt = " ".join(excerpt_lines)
+
+            # Stop when we have enough content
+            if len(excerpt) >= max_chars:
+                break
+
+        if excerpt_lines:
+            excerpt = " ".join(excerpt_lines)
+            # Clean markdown formatting
+            excerpt = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", excerpt)  # Remove links
+            excerpt = re.sub(r"[*_`]", "", excerpt)  # Remove formatting
+            return excerpt[:max_chars].strip()
+
+        return None
 
     async def close(self):
         """Close the HTTP client"""

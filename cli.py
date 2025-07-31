@@ -70,7 +70,7 @@ async def seed_repositories(backup_file: Optional[str] = None) -> None:
 
     saved_count = 0
     with Session(engine) as session:
-        for full_name in github_repos[:50]:  # Limit for testing
+        for full_name in github_repos:  # Limit for testing
             if session.exec(
                 select(Repository).where(Repository.full_name == full_name)
             ).first():
@@ -80,12 +80,17 @@ async def seed_repositories(backup_file: Optional[str] = None) -> None:
             if not repo_data:
                 continue
 
+            # Get additional metadata including topics
+            metadata = await github_client.get_repository_metadata(full_name)
+            topics_json = json.dumps(metadata.get("topics", [])) if metadata else None
+
             repo = Repository(
                 name=repo_data["name"],
                 full_name=repo_data["full_name"],
                 description=repo_data.get("description"),
                 github_url=repo_data["html_url"],
                 stars=repo_data.get("stargazers_count"),
+                github_topics=topics_json,
             )
             session.add(repo)
             session.commit()

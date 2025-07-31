@@ -75,7 +75,7 @@ awesomeindex/
 │   ├── parse_projects.py    # Parse projects from repository READMEs and index in MeiliSearch
 │   └── test_search.py       # Test MeiliSearch functionality
 ├── .env                     # Environment configuration (GitHub token, DB path)
-├── awesomesearch.db        # SQLite database file
+├── awesomeindex.db        # SQLite database file
 ├── awesome-repositories-backup.json # Repository data backup
 ├── pyproject.toml           # uv project configuration
 ├── uv.lock                  # Dependency lock file

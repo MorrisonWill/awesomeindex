@@ -121,6 +121,7 @@ class SearchService:
                 "description",
                 "category",
                 "repository_name",
+                "readme_excerpt",  # New field for better search context
             ]
 
             filterable_attributes = [
@@ -128,6 +129,7 @@ class SearchService:
                 "category",
                 "repository_name",
                 "github_stars",
+                "repository_topics",  # New field for topic filtering
             ]
 
             sortable_attributes = ["github_stars", "created_at"]

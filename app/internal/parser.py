@@ -67,6 +67,10 @@ class MarkdownParser:
                 url = groups[1].strip()
                 description = groups[2].strip() if len(groups) > 2 else None
 
+                # Skip invalid URLs (anchors, empty, etc.)
+                if not self._is_valid_url(url):
+                    continue
+
                 # Determine if URL is GitHub
                 github_url = url if self._is_github_url(url) else None
 
@@ -94,6 +98,25 @@ class MarkdownParser:
         try:
             parsed = urlparse(url)
             return parsed.netloc.lower() in ["github.com", "www.github.com"]
+        except Exception:
+            return False
+
+    def _is_valid_url(self, url: str) -> bool:
+        """Check if URL is valid (not an anchor link)"""
+        if not url or url.strip() == "":
+            return False
+        
+        # Filter out anchor-only URLs
+        if url.startswith('#'):
+            return False
+            
+        # Filter out relative anchor URLs
+        if '#' in url and not url.startswith('http'):
+            return False
+            
+        try:
+            parsed = urlparse(url)
+            return bool(parsed.netloc)  # Must have a domain
         except Exception:
             return False
 

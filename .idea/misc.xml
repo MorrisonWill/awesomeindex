@@ -7,7 +7,7 @@
     <option name="show" value="ASK" />
     <option name="description" value="" />
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="Python 3.12 virtualenv at ~/IntellijProjects/awesomeindex/.venv" project-jdk-type="Python SDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="Python 3.12 (awesomeindex)" project-jdk-type="Python SDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>
