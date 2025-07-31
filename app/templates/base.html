@@ -114,7 +114,78 @@
         }
 
         .filters {
-            display: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--hover);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .filter-select, .filter-input {
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--link);
+        }
+
+        .filter-input {
+            width: 80px;
+        }
+
+        .filter-presets {
+            margin-left: auto;
+        }
+
+        .filter-preset {
+            padding: 0.25rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 12px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-preset:hover {
+            background: var(--link);
+            color: white;
+            border-color: var(--link);
+        }
+
+        .filter-preset[data-preset="clear"] {
+            color: var(--text-muted);
         }
 
         .loading {
@@ -253,6 +324,54 @@
             .catch(() => {
                 document.getElementById('stats').textContent = '';
             });
+
+        // Load filter options
+        Promise.all([
+            fetch('/api/projects/languages/').then(r => r.json()),
+            fetch('/api/projects/categories/').then(r => r.json()),
+            fetch('/api/projects/repositories/').then(r => r.json())
+        ]).then(([langData, catData, repoData]) => {
+            // Populate languages
+            const langSelects = document.querySelectorAll('.language-filter');
+            langSelects.forEach(select => {
+                langData.languages?.forEach(lang => {
+                    if (lang) {
+                        const option = document.createElement('option');
+                        option.value = lang;
+                        option.textContent = lang;
+                        select.appendChild(option);
+                    }
+                });
+            });
+
+            // Populate categories
+            const catSelects = document.querySelectorAll('.category-filter');
+            catSelects.forEach(select => {
+                catData.categories?.forEach(cat => {
+                    if (cat) {
+                        const option = document.createElement('option');
+                        option.value = cat;
+                        option.textContent = cat;
+                        select.appendChild(option);
+                    }
+                });
+            });
+
+            // Populate repositories
+            const repoSelects = document.querySelectorAll('.repository-filter');
+            repoSelects.forEach(select => {
+                repoData.forEach(repo => {
+                    const option = document.createElement('option');
+                    option.value = repo.name;
+                    // Strip 'awesome-' prefix for cleaner display
+                    const displayName = repo.name.startsWith('awesome-')
+                        ? repo.name.substring(8)
+                        : repo.name;
+                    option.textContent = displayName;
+                    select.appendChild(option);
+                });
+            });
+        });
     });
 </script>
 </body>

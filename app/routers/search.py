@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.internal.search import search_service
 
 router = APIRouter(prefix="/api/search", tags=["search"])
@@ -22,17 +22,49 @@ async def search_projects(
     q: str = Query(..., description="Search query"),
     category: Optional[str] = Query(None, description="Filter by category"),
     repository: Optional[str] = Query(None, description="Filter by repository name"),
+    language: Optional[str] = Query(None, description="Filter by programming language"),
+    min_stars: int = Query(0, ge=0, description="Minimum GitHub stars"),
+    topics: Optional[str] = Query(None, description="Filter by topics (comma-separated)"),
+    sort: str = Query("relevance", description="Sort order: relevance, stars, recent, name"),
     limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
 ) -> Dict[str, Any]:
     """Search for projects across all awesome repositories"""
 
-    filter_string = build_filters(category, repository)
+    # Build filters
+    filters = []
+    if category:
+        filters.append(f"category = '{category}'")
+    if repository:
+        filters.append(f"repository_name = '{repository}'")
+    if language:
+        filters.append(f"github_language = '{language}'")
+    if min_stars > 0:
+        filters.append(f"github_stars >= {min_stars}")
+    
+    # Handle topics filter
+    if topics:
+        topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
+        topic_filters = [f"github_topics = '{topic}'" for topic in topic_list]
+        if topic_filters:
+            filters.append(f"({' OR '.join(topic_filters)})")
+    
+    filter_string = " AND ".join(filters) if filters else None
+    
+    # Prepare sort parameter
+    sort_param = None
+    if sort == "stars":
+        sort_param = ["github_stars:desc"]
+    elif sort == "recent":
+        sort_param = ["updated_at:desc"]
+    elif sort == "name":
+        sort_param = ["name:asc"]
 
     try:
         results = await search_service.search_projects(
             query=q,
             filters=filter_string,
+            sort=sort_param,
             limit=limit,
             offset=offset,
         )

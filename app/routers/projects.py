@@ -86,3 +86,46 @@ async def list_repositories_with_projects(session: Session = Depends(get_session
 
     repositories = session.exec(statement).all()
     return repositories
+
+
+@router.get("/languages/")
+async def list_languages(session: Session = Depends(get_session)):
+    """Get all unique programming languages"""
+
+    statement = (
+        select(Project.github_language)
+        .distinct()
+        .where(Project.github_language.is_not(None), Project.github_language != "")
+    )
+    languages = session.exec(statement).all()
+
+    return {"languages": sorted([lang for lang in languages if lang])}
+
+
+@router.get("/topics/")
+async def list_topics(session: Session = Depends(get_session)):
+    """Get popular topics from projects"""
+    import json
+    from collections import Counter
+
+    # Get all projects with topics
+    statement = select(Project.github_topics).where(
+        Project.github_topics.is_not(None), Project.github_topics != ""
+    )
+
+    topic_counter = Counter()
+
+    for topics_json in session.exec(statement).all():
+        try:
+            topics = json.loads(topics_json)
+            topic_counter.update(topics)
+        except:
+            pass
+
+    # Return top 50 topics
+    popular_topics = [
+        {"name": topic, "count": count}
+        for topic, count in topic_counter.most_common(50)
+    ]
+
+    return {"topics": popular_topics}

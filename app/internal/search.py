@@ -60,6 +60,7 @@ class SearchService:
         self,
         query: str,
         filters: Optional[str] = None,
+        sort: Optional[List[str]] = None,
         limit: int = 20,
         offset: int = 0,
     ) -> Dict[str, Any]:
@@ -75,6 +76,9 @@ class SearchService:
 
             if filters:
                 search_params["filter"] = filters
+                
+            if sort:
+                search_params["sort"] = sort
 
             result = await index.search(query, **search_params)
 
@@ -133,7 +137,7 @@ class SearchService:
                 "github_topics",
             ]
 
-            sortable_attributes = ["github_stars", "created_at"]
+            sortable_attributes = ["github_stars", "created_at", "updated_at", "name"]
 
             # Apply configuration
             await index.update_searchable_attributes(searchable_attributes)
