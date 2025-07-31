@@ -102,10 +102,12 @@ awesomeindex/
 
 ### Setup
 ```bash
-uv init
-uv add fastapi sqlmodel uvicorn jinja2 httpx meilisearch-python-sdk
-uv add --dev ruff ty
-python scripts/setup.py
+# Project already initialized with uv
+# Dependencies: fastapi, sqlmodel, uvicorn, jinja2, httpx, pydantic-settings
+# Dev dependencies: ruff, ty
+
+# To run the application:
+uv run python -m app.main
 ```
 
 ### Running

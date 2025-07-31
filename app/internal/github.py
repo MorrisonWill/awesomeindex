@@ -7,7 +7,7 @@ class GitHubClient:
     """GitHub API client for fetching repository data"""
 
     def __init__(self):
-        self.base_url = settings.github_api_url
+        self.base_url = "https://api.github.com"
         self.token = settings.github_token
         self.client = httpx.AsyncClient(headers=self._get_headers(), timeout=30.0)
 
