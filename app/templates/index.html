@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}AwesomeIndex - Search Awesome Projects{% endblock %}
+
+{% block content %}
+<div class="homepage" x-data="{
+    showWelcome: true,
+    featuredCategories: ['Python', 'JavaScript', 'Go', 'Rust', 'Machine Learning', 'Web Development']
+}">
+    <!-- Welcome Section -->
+    <div x-show="showWelcome" class="welcome-section">
+        <h1>Discover Amazing Open Source Projects</h1>
+        <p class="lead">Search across thousands of curated projects from GitHub's awesome lists. Find libraries, tools,
+            and resources for any technology.</p>
+
+        <div class="featured-categories">
+            <h2>Popular Categories</h2>
+            <div class="category-grid">
+                <template x-for="category in featuredCategories">
+                    <button class="category-card"
+                            @click="$dispatch('search-category', { category })"
+                            hx-get="/search"
+                            :hx-vals="'{ \" category\
+                    ": \"' + category + '\" }'"
+                    hx-target="#search-results">
+                    <span x-text="category"></span>
+                    </button>
+                </template>
+            </div>
+        </div>
+
+        <div class="recent-stats">
+            <div class="stat-item">
+                <span class="stat-number" hx-get="/api/stats" hx-target="this" hx-trigger="load">-</span>
+                <span class="stat-label">Total Projects</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">50+</span>
+                <span class="stat-label">Awesome Lists</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">Live</span>
+                <span class="stat-label">GitHub Sync</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Results Area -->
+    <div id="search-results"
+         class="search-results"
+         x-show="!showWelcome"
+         @htmx:afterRequest="showWelcome = false">
+        <!-- Results will be loaded here via HTMX -->
+    </div>
+
+    <!-- Empty state for no search -->
+    <div id="no-search" style="display: none;">
+        <p>Start typing to search across awesome projects...</p>
+    </div>
+</div>
+
+<style>
+    .welcome-section {
+        text-align: center;
+        padding: 3rem 0;
+    }
+
+    .welcome-section h1 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #212529;
+        margin-bottom: 1rem;
+    }
+
+    .lead {
+        font-size: 1.25rem;
+        color: #6c757d;
+        margin-bottom: 3rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .featured-categories {
+        margin-bottom: 3rem;
+    }
+
+    .featured-categories h2 {
+        font-size: 1.5rem;
+        color: #495057;
+        margin-bottom: 1.5rem;
+    }
+
+    .category-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .category-card {
+        background: #fff;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem 1rem;
+        font-weight: 500;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .category-card:hover {
+        border-color: #007bff;
+        color: #007bff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+    }
+
+    .recent-stats {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        margin-top: 2rem;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-number {
+        display: block;
+        font-size: 2rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .search-results {
+        margin-top: 2rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .welcome-section h1 {
+            font-size: 2rem;
+        }
+
+        .category-grid {
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .recent-stats {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Load project count on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        // Simulate loading project count (replace with actual API call)
+        setTimeout(() => {
+            const countElement = document.getElementById('project-count');
+            if (countElement && countElement.textContent === 'Loading...') {
+                countElement.textContent = '12,000+';
+            }
+        }, 1000);
+    });
+
+    // Handle category searches
+    document.addEventListener('search-category', function (event) {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.value = event.detail.category;
+            searchInput.dispatchEvent(new Event('input'));
+        }
+    });
+</script>
+{% endblock %}

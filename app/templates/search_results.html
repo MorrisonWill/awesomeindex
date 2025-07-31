@@ -1,0 +1,342 @@
+<!-- Search Results Template -->
+<div class="search-results-container">
+    {% if results.hits %}
+    <div class="results-header">
+        <h2>{{ results.total }} project{{ 's' if results.total != 1 else '' }} found</h2>
+        <div class="search-meta">
+            <span>Query: "{{ results.query }}"</span>
+            {% if results.filters %}
+            <span class="filters">
+                        {% for key, value in results.filters.items() %}
+                            <span class="filter-tag">{{ key }}: {{ value }}</span>
+                        {% endfor %}
+                    </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="projects-grid">
+        {% for project in results.hits %}
+        <div class="project-card" x-data="{ expanded: false }">
+            <div class="project-header">
+                <h3 class="project-name">
+                    {% if project.url %}
+                    <a href="{{ project.url }}" target="_blank" rel="noopener">
+                        {{ project.name }}
+                        <svg class="external-link" width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"/>
+                        </svg>
+                    </a>
+                    {% else %}
+                    {{ project.name }}
+                    {% endif %}
+                </h3>
+
+                <div class="project-meta">
+                    {% if project.github_stars %}
+                    <span class="stars">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.46,13.97L5.82,21L12,17.27Z"/>
+                                    </svg>
+                                    {{ project.github_stars | format_number }}
+                                </span>
+                    {% endif %}
+
+                    {% if project.github_language %}
+                    <span class="language">{{ project.github_language }}</span>
+                    {% endif %}
+
+                    {% if project.category %}
+                    <span class="category">{{ project.category }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if project.description %}
+            <p class="project-description">{{ project.description }}</p>
+            {% endif %}
+
+            <div class="project-footer">
+                <div class="project-source">
+                    <span>from</span>
+                    <a href="https://github.com/{{ project.repository_full_name }}"
+                       target="_blank"
+                       rel="noopener"
+                       class="repo-link">
+                        {{ project.repository_name }}
+                    </a>
+                </div>
+
+                {% if project.github_url %}
+                <a href="{{ project.github_url }}"
+                   target="_blank"
+                   rel="noopener"
+                   class="github-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"/>
+                    </svg>
+                    GitHub
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if results.total > results.limit %}
+    <div class="pagination">
+        <button class="load-more-btn"
+                hx-get="/search"
+                hx-vals='{"q": "{{ results.query }}", "offset": {{ results.offset + results.limit }}}'
+                hx-target=".projects-grid"
+                hx-swap="beforeend">
+            Load More Projects
+        </button>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="no-results">
+        <div class="no-results-icon">🔍</div>
+        <h2>No projects found</h2>
+        <p>Try a different search term or browse by category.</p>
+
+        <div class="search-suggestions">
+            <p>Popular searches:</p>
+            <div class="suggestion-tags">
+                <button class="suggestion-tag" hx-get="/search" hx-vals='{"q": "python web framework"}'
+                        hx-target="#search-results">Web Frameworks
+                </button>
+                <button class="suggestion-tag" hx-get="/search" hx-vals='{"q": "machine learning"}'
+                        hx-target="#search-results">Machine Learning
+                </button>
+                <button class="suggestion-tag" hx-get="/search" hx-vals='{"q": "cli tools"}'
+                        hx-target="#search-results">CLI Tools
+                </button>
+                <button class="suggestion-tag" hx-get="/search" hx-vals='{"q": "database"}' hx-target="#search-results">
+                    Databases
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .search-results-container {
+        margin-top: 2rem;
+    }
+
+    .results-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .results-header h2 {
+        font-size: 1.5rem;
+        color: #212529;
+        margin-bottom: 0.5rem;
+    }
+
+    .search-meta {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .filter-tag {
+        background: #e9ecef;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+    }
+
+    .projects-grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: 1fr;
+    }
+
+    .project-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: all 0.2s;
+    }
+
+    .project-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    }
+
+    .project-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .project-name {
+        font-size: 1.25rem;
+        margin: 0;
+        flex: 1;
+    }
+
+    .project-name a {
+        color: #007bff;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .project-name a:hover {
+        text-decoration: underline;
+    }
+
+    .external-link {
+        opacity: 0.7;
+    }
+
+    .project-meta {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .stars {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: #f39c12;
+    }
+
+    .language {
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .category {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .project-description {
+        color: #495057;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .project-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .repo-link {
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .repo-link:hover {
+        text-decoration: underline;
+    }
+
+    .github-link {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6c757d;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .github-link:hover {
+        background: #f8f9fa;
+        border-color: #dee2e6;
+    }
+
+    .no-results {
+        text-align: center;
+        padding: 3rem 1rem;
+    }
+
+    .no-results-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .no-results h2 {
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+
+    .search-suggestions {
+        margin-top: 2rem;
+    }
+
+    .suggestion-tags {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .suggestion-tag {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .suggestion-tag:hover {
+        background: #007bff;
+        color: #fff;
+        border-color: #007bff;
+    }
+
+    .pagination {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .load-more-btn {
+        background: #007bff;
+        color: #fff;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .load-more-btn:hover {
+        background: #0056b3;
+    }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+        .projects-grid {
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+    }
+</style>

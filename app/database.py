@@ -3,6 +3,9 @@ from sqlalchemy import event
 from typing import Generator
 from app.config import settings
 
+# Import models to register them with SQLModel
+from app.models import Repository, Project
+
 engine = create_engine(
     settings.database_url,
     echo=settings.debug,

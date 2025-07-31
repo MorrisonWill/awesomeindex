@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AwesomeIndex{% endblock %}</title>
+
+    <!-- HTMX -->
+    <script src="{{ url_for('static', path='/htmx.min.js') }}"></script>
+
+
+    <!-- Alpine.js -->
+    <script defer src="{{ url_for('static', path='/alpine.min.js') }}"></script>
+
+
+    <!-- Basic styling -->
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: #fff;
+            border-bottom: 1px solid #e9ecef;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .search-form {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .stats {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        main {
+            min-height: 60vh;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding: 2rem 0;
+            border-top: 1px solid #e9ecef;
+            background: #fff;
+            color: #6c757d;
+            text-align: center;
+        }
+
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .htmx-indicator {
+            display: none;
+        }
+
+        .htmx-request .htmx-indicator {
+            display: inline;
+        }
+
+        .htmx-request.loading {
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-form {
+                margin: 0;
+                width: 100%;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+    <div class="container">
+        <div class="header-content">
+            <a href="/" class="logo">AwesomeIndex</a>
+
+            {% block search_bar %}
+                <form class="search-form"
+                      hx-get="/search"
+                      hx-target="#search-results"
+                      hx-trigger="input changed delay:300ms, search"
+                      hx-indicator="#search-indicator">
+                    <input type="search"
+                           name="q"
+                           class="search-input"
+                           placeholder="Search awesome projects..."
+                           autocomplete="off"
+                           x-data="{ query: '' }"
+                           x-model="query">
+                    <span id="search-indicator" class="htmx-indicator">Searching...</span>
+                </form>
+            {% endblock %}
+
+            <div class="stats">
+                <span id="project-count">Loading...</span> projects
+            </div>
+        </div>
+    </div>
+</header>
+
+<main>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<footer>
+    <div class="container">
+        <p>&copy; 2025 AwesomeIndex - Discover projects from GitHub's awesome lists</p>
+    </div>
+</footer>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
