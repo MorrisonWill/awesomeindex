@@ -1,10 +1,13 @@
-FROM ghcr.io/astral-sh/uv:python3.12-slim
+FROM python:3.12-alpine
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    UV_SYSTEM_PYTHON=1
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
+
+# Install dependencies: uv, curl, libgcc and copy MeiliSearch
+RUN pip install uv && apk add --no-cache curl libgcc
+COPY --from=getmeili/meilisearch:v1.15 /bin/meilisearch /usr/local/bin/meilisearch
 
 # Copy uv files
 COPY pyproject.toml uv.lock ./
@@ -15,11 +18,15 @@ RUN uv sync --frozen --no-dev
 # Copy application code
 COPY . .
 
-# Create data directory for volume mount
-RUN mkdir -p /app/data
+# Create data directories for volume mounts
+RUN mkdir -p /app/data /app/data/meili_data
 
-# Expose port
-EXPOSE 8000
+# Copy start script
+COPY start.sh .
+RUN chmod +x start.sh
 
-# Run the application
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose ports
+EXPOSE 8000 7700
+
+# Run both services
+CMD ["./start.sh"]

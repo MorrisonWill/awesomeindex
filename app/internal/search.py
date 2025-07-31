@@ -121,7 +121,6 @@ class SearchService:
                 "description",
                 "category",
                 "repository_name",
-                "readme_excerpt",  # New field for better search context
             ]
 
             filterable_attributes = [

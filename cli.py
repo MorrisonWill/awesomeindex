@@ -135,9 +135,23 @@ async def parse_projects(limit: int = 5) -> None:
                     name=parsed.name,
                     description=parsed.description,
                     url=parsed.url,
-                    github_url=parsed.github_url,
                     category=parsed.category,
                 )
+                
+                # Enrich with GitHub metadata if it's a GitHub project
+                if parsed.url and 'github.com' in parsed.url:
+                    github_repo_name = markdown_parser.extract_github_repo_name(parsed.url)
+                    if github_repo_name:
+                        try:
+                            github_data = await github_client.get_repository(github_repo_name)
+                            if github_data:
+                                project.github_stars = github_data.get("stargazers_count", 0)
+                                project.github_language = github_data.get("language", "")
+                                
+                            await asyncio.sleep(0.1)  # Rate limiting
+                        except Exception as e:
+                            print(f"  ⚠️ Failed to enrich {parsed.name}: {e}")
+                
                 session.add(project)
                 db_projects.append(project)
 
@@ -159,11 +173,10 @@ async def parse_projects(limit: int = 5) -> None:
                         "name": project.name,
                         "description": project.description or "",
                         "url": project.url,
-                        "github_url": project.github_url,
+                        "github_url": project.url if project.url and 'github.com' in project.url else None,
                         "category": project.category or "",
                         "github_stars": project.github_stars or 0,
                         "github_language": project.github_language or "",
-                        "readme_excerpt": project.readme_excerpt or "",
                         "repository_id": repo.id,
                         "repository_name": repo.name,
                         "repository_topics": repository_topics,

@@ -23,13 +23,13 @@ from app.internal.parser import markdown_parser
 
 async def enrich_project_metadata(session: Session, project: Project) -> bool:
     """Enrich a single project with GitHub metadata"""
-    if not project.github_url:
+    if not project.url or 'github.com' not in project.url:
         return False
 
     # Extract repo name from GitHub URL
-    repo_name = markdown_parser.extract_github_repo_name(project.github_url)
+    repo_name = markdown_parser.extract_github_repo_name(project.url)
     if not repo_name:
-        print(f"Could not extract repo name from: {project.github_url}")
+        print(f"Could not extract repo name from: {project.url}")
         return False
 
     print(f"Enriching project: {project.name} ({repo_name})")
@@ -41,13 +41,9 @@ async def enrich_project_metadata(session: Session, project: Project) -> bool:
             print(f"  Failed to get metadata for {repo_name}")
             return False
 
-        # Get README excerpt
-        readme_excerpt = await github_client.get_readme_excerpt(repo_name, 200)
-
         # Update project
         project.github_stars = metadata.get("stars", 0)
         project.github_language = metadata.get("language")
-        project.readme_excerpt = readme_excerpt
 
         session.add(project)
         print(
@@ -94,7 +90,7 @@ async def main():
         # Get projects that need enrichment (have GitHub URL but no stars)
         projects_to_enrich = session.exec(
             select(Project).where(
-                Project.github_url.is_not(None), Project.github_stars.is_(None)
+                Project.url.contains('github.com'), Project.github_stars.is_(None)
             )
         ).all()
 

@@ -15,13 +15,12 @@ class Project(SQLModel, table=True):
     name: str = Field(index=True)
     description: Optional[str] = None
     url: Optional[str] = None
-    github_url: Optional[str] = None
     category: Optional[str] = Field(default=None, index=True)
 
     # GitHub metadata
     github_stars: Optional[int] = None
     github_language: Optional[str] = Field(default=None, index=True)
-    readme_excerpt: Optional[str] = None  # First ~200 chars of README
+    github_topics: Optional[str] = None  # JSON string of topics array
 
     # Status
     is_active: bool = True

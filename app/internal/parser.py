@@ -9,7 +9,6 @@ class ParsedProject(NamedTuple):
     name: str
     description: Optional[str]
     url: Optional[str]
-    github_url: Optional[str]
     category: Optional[str]
     raw_markdown: str
 
@@ -71,14 +70,10 @@ class MarkdownParser:
                 if not self._is_valid_url(url):
                     continue
 
-                # Determine if URL is GitHub
-                github_url = url if self._is_github_url(url) else None
-
                 return ParsedProject(
                     name=name,
                     description=description,
                     url=url,
-                    github_url=github_url,
                     category=category,
                     raw_markdown=line.strip(),
                 )
