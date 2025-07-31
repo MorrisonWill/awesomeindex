@@ -1,44 +1,37 @@
 {% extends "base.html" %}
 
 {% block search %}
-    <form hx-get="/search" hx-target="#search-results" hx-trigger="input changed delay:300ms, submit"
-          hx-indicator="#loading">
+    <form hx-get="/search" hx-target="#search-results" hx-trigger="input changed delay:300ms from:.search-input"
+          hx-indicator=".loading">
         <div class="search-box">
-            <input type="text" name="q" placeholder="Search awesome projects..." autocomplete="off" required
-                   class="search-input">
-            <button type="submit">Search</button>
-        </div>
-        <div class="filters">
-            <select name="repository" class="filter-select">
-                <option value="">All repositories</option>
-            </select>
-            <select name="category" class="filter-select">
-                <option value="">All categories</option>
-            </select>
+            <input type="text" name="q" placeholder="Search projects, tools, libraries..." autocomplete="off"
+                   class="search-input" autofocus>
+            <div class="search-hint">
+                <span>Press</span>
+                <kbd class="kbd">/</kbd>
+                <span>to search</span>
+            </div>
         </div>
     </form>
-    <div id="loading" class="loading htmx-indicator">Searching...</div>
 {% endblock %}
 
 {% block content %}
-    <div style="text-align: center; padding: 2rem 0;">
-        <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">Search Awesome Projects</h1>
-        <p style="color: #666; margin-bottom: 2rem;">Find curated open source projects from GitHub's awesome lists.</p>
+    <div id="loading" class="loading htmx-indicator">Searching...</div>
+
+    <div class="no-results" id="welcome">
+        <h3>Search thousands of curated open source projects</h3>
+        <p>Type to search across all GitHub awesome lists</p>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            ['categories', 'repositories'].forEach(type => {
-                fetch(`/api/projects/${type}/`).then(r => r.json()).then(data => {
-                    const select = document.querySelector(`select[name="${type === 'categories' ? 'category' : 'repository'}"]`);
-                    (data.categories || data).forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.name || item;
-                        option.textContent = item.name || item;
-                        select.appendChild(option);
-                    });
-                });
-            });
+        // Hide welcome message when search results appear
+        const observer = new MutationObserver(() => {
+            const results = document.querySelector('#search-results');
+            const welcome = document.querySelector('#welcome');
+            if (results && results.innerHTML.trim()) {
+                welcome.style.display = 'none';
+            }
         });
+        observer.observe(document.querySelector('#search-results'), {childList: true});
     </script>
 {% endblock %}

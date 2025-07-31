@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""
+awesomeindex-parse - Parse projects from repositories and index them
+"""
+
+import asyncio
+import sys
+import json
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from sqlmodel import Session, select
+from app.database import engine
+from app.models.repository import Repository
+from app.models.project import Project
+from app.internal.github import github_client
+from app.internal.parser import markdown_parser
+from app.internal.search import search_service
+
+
+async def main():
+    """Parse and index projects from all repositories"""
+    if len(sys.argv) > 1 and sys.argv[1] == "--help":
+        print("Usage: awesomeindex-parse [--repo NAME] [--limit N]")
+        print("\nParse projects from awesome repositories and index them.")
+        print("\nOptions:")
+        print("  --repo NAME    Parse only specific repository")
+        print("  --limit N      Limit to first N repositories")
+        sys.exit(0)
+
+    # Parse arguments
+    repo_name = None
+    limit = None
+
+    i = 1
+    while i < len(sys.argv):
+        if sys.argv[i] == "--repo" and i + 1 < len(sys.argv):
+            repo_name = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--limit" and i + 1 < len(sys.argv):
+            limit = int(sys.argv[i + 1])
+            i += 2
+        else:
+            print(f"Error: Unknown option {sys.argv[i]}", file=sys.stderr)
+            sys.exit(1)
+
+    await search_service.initialize()
+
+    with Session(engine) as session:
+        query = select(Repository)
+        if repo_name:
+            query = query.where(Repository.name == repo_name)
+        if limit:
+            query = query.limit(limit)
+
+        repos = session.exec(query).all()
+
+        if not repos:
+            print("No repositories found")
+            sys.exit(1)
+
+        total_projects = 0
+
+        for repo in repos:
+            print(f"Processing {repo.name}...")
+
+            readme = await github_client.get_readme_content(repo.full_name)
+            if not readme:
+                print(f"  ⚠ No README found")
+                continue
+
+            parsed = markdown_parser.parse_awesome_readme(readme)
+            if not parsed:
+                print(f"  ⚠ No projects found")
+                continue
+
+            # Clear existing projects
+            for project in session.exec(
+                select(Project).where(Project.repository_id == repo.id)
+            ).all():
+                session.delete(project)
+
+            # Add new projects
+            db_projects = []
+            search_docs = []
+
+            for p in parsed:
+                project = Project(
+                    repository_id=repo.id,
+                    name=p.name,
+                    description=p.description,
+                    url=p.url,
+                    category=p.category,
+                )
+
+                # Enrich GitHub projects
+                if p.url and "github.com" in p.url:
+                    github_repo = markdown_parser.extract_github_repo_name(p.url)
+                    if github_repo:
+                        try:
+                            data = await github_client.get_repository(github_repo)
+                            if data:
+                                project.github_stars = data.get("stargazers_count", 0)
+                                project.github_language = data.get("language", "")
+                                project.github_topics = json.dumps(
+                                    data.get("topics", [])
+                                )
+                            await asyncio.sleep(0.2)
+                        except Exception:
+                            pass
+
+                session.add(project)
+                db_projects.append(project)
+
+            session.commit()
+
+            # Prepare search documents
+            repo_topics = []
+            if repo.github_topics:
+                try:
+                    repo_topics = json.loads(repo.github_topics)
+                except:
+                    pass
+
+            for project in db_projects:
+                project_topics = []
+                if project.github_topics:
+                    try:
+                        project_topics = json.loads(project.github_topics)
+                    except:
+                        pass
+
+                search_docs.append(
+                    {
+                        "id": project.id,
+                        "name": project.name,
+                        "description": project.description or "",
+                        "url": project.url,
+                        "github_url": project.url
+                        if project.url and "github.com" in project.url
+                        else None,
+                        "category": project.category or "",
+                        "github_stars": project.github_stars or 0,
+                        "github_language": project.github_language or "",
+                        "github_topics": project_topics,
+                        "repository_id": repo.id,
+                        "repository_name": repo.name,
+                        "repository_topics": repo_topics,
+                        "created_at": project.created_at.isoformat()
+                        if project.created_at
+                        else None,
+                        "updated_at": project.updated_at.isoformat()
+                        if project.updated_at
+                        else None,
+                    }
+                )
+
+            await search_service.index_projects(search_docs)
+            print(f"  ✓ Indexed {len(db_projects)} projects")
+            total_projects += len(db_projects)
+
+    print(f"\nTotal: {total_projects} projects indexed")
+    await github_client.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

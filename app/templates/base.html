@@ -4,8 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AwesomeIndex{% endblock %}</title>
+    <meta name="description" content="Search curated open source projects from GitHub's awesome lists">
     <script src="{{ url_for('static', path='/htmx.min.js') }}"></script>
     <style>
+        :root {
+            --text: #24292e;
+            --text-muted: #586069;
+            --bg: #fff;
+            --border: #e1e4e8;
+            --link: #0366d6;
+            --hover: #f6f8fa;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #c9d1d9;
+                --text-muted: #8b949e;
+                --bg: #0d1117;
+                --border: #30363d;
+                --link: #58a6ff;
+                --hover: #161b22;
+            }
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -13,96 +34,119 @@
         }
 
         body {
-            font-family: system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 14px;
             line-height: 1.5;
-            color: #333;
+            color: var(--text);
+            background: var(--bg);
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 1rem;
+            padding: 0 1rem;
         }
 
         header {
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+            padding: 1rem 0;
         }
 
         .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #333;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
             text-decoration: none;
-            margin-bottom: 1rem;
-            display: block;
+            display: inline-block;
+            margin-bottom: 0.5rem;
         }
 
         .search-input {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 1rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: var(--bg);
+            color: var(--text);
+            font-family: inherit;
         }
 
         .search-input:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--link);
+            box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
         }
 
         .search-box {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 1rem;
-            gap: 0.5rem;
-        }
-
-        .search-box button {
-            padding: 0.75rem 1.5rem;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .search-box button:hover {
-            background: #0056b3;
-        }
-
-        .filters {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .filter-select {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-
-        .loading {
-            color: #666;
-            font-style: italic;
-            margin: 1rem 0;
-        }
-
-        .project {
-            border-bottom: 1px solid #eee;
-            padding: 1rem 0;
-        }
-
-        .project h3 {
+            position: relative;
             margin-bottom: 0.5rem;
         }
 
+        .search-hint {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            color: var(--text-muted);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .kbd {
+            padding: 2px 4px;
+            font-size: 11px;
+            font-family: monospace;
+            background: var(--hover);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+        }
+
+        .filters {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            display: none;
+        }
+
+        .loading.htmx-request {
+            display: block;
+        }
+
+        .project {
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+        }
+
+        .project:hover {
+            background: var(--hover);
+            margin: 0 -0.75rem;
+            padding: 1rem 0.75rem;
+        }
+
+        .project h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
         .project h3 a {
-            color: #007bff;
+            color: var(--link);
             text-decoration: none;
         }
 
@@ -111,44 +155,64 @@
         }
 
         .project p {
-            color: #666;
+            color: var(--text-muted);
             margin-bottom: 0.5rem;
+            line-height: 1.6;
         }
 
         .meta {
-            font-size: 0.9rem;
-            color: #888;
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        .meta span {
-            margin-right: 1rem;
-            display: inline-block;
+        .meta > * {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
 
-        .meta .repository {
-            background: #f8f9fa;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-weight: bold;
-        }
-
-        .meta .category {
-            background: #e9ecef;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
+        .meta .stars {
+            color: var(--text);
+            font-weight: 600;
         }
 
         .no-results {
             text-align: center;
-            padding: 2rem;
-            color: #666;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .no-results h3 {
+            color: var(--text);
+            font-size: 18px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats {
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 0.5rem 0;
+        }
+
+        .results-header {
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <a href="/" class="logo">AwesomeIndex</a>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="/" class="logo">AwesomeIndex</a>
+            <div class="stats" id="stats"></div>
+        </div>
         {% block search %}{% endblock %}
     </header>
 
@@ -157,5 +221,39 @@
         <div id="search-results"></div>
     </main>
 </div>
+
+<script>
+    // Keyboard shortcuts
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.querySelector('.search-input');
+
+        // Focus search with /
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' && document.activeElement !== searchInput) {
+                e.preventDefault();
+                searchInput?.focus();
+            }
+        });
+
+        // Clear search with Escape
+        searchInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        });
+
+        // Load stats
+        fetch('/api/search/stats')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('stats').textContent =
+                    `${data.total_documents || 0} projects indexed`;
+            })
+            .catch(() => {
+                document.getElementById('stats').textContent = '';
+            });
+    });
+</script>
 </body>
 </html>

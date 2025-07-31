@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+"""
+awesomeindex-seed - Seed repositories from GitHub's awesome lists
+"""
+
+import asyncio
+import sys
+import json
+from pathlib import Path
+
+# Add project root to path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from sqlmodel import Session, select
+from app.database import engine
+from app.models.repository import Repository
+from app.internal.github import github_client
+from app.internal.parser import markdown_parser
+
+
+async def main():
+    """Discover and save awesome repositories"""
+    if len(sys.argv) > 1 and sys.argv[1] == "--help":
+        print("Usage: awesomeindex-seed [--from-backup FILE]")
+        print("\nDiscover awesome repositories from sindresorhus/awesome")
+        print("or load from a JSON backup file.")
+        sys.exit(0)
+
+    # Check for backup file
+    if len(sys.argv) == 3 and sys.argv[1] == "--from-backup":
+        backup_file = Path(sys.argv[2])
+        if not backup_file.exists():
+            print(f"Error: {backup_file} not found", file=sys.stderr)
+            sys.exit(1)
+
+        with open(backup_file) as f:
+            repos_data = json.load(f)
+
+        with Session(engine) as session:
+            for repo_data in repos_data:
+                if not session.exec(
+                    select(Repository).where(
+                        Repository.full_name == repo_data["full_name"]
+                    )
+                ).first():
+                    repo = Repository(**repo_data)
+                    session.add(repo)
+            session.commit()
+        print(f"Loaded {len(repos_data)} repositories")
+        return
+
+    # Default: discover from GitHub
+    readme = await github_client.get_readme_content("sindresorhus/awesome")
+    if not readme:
+        print("Error: Failed to fetch sindresorhus/awesome", file=sys.stderr)
+        sys.exit(1)
+
+    import re
+
+    github_pattern = re.compile(
+        r"\[([^\]]+)\]\((https://github\.com/[^/]+/[^/)]+)(?:/[^)]*)?\)", re.IGNORECASE
+    )
+
+    repo_urls = set()
+    for match in github_pattern.finditer(readme):
+        url = match.group(2).rstrip("/")
+        if "awesome" in url.lower() and "sindresorhus/awesome" not in url.lower():
+            repo_urls.add(url)
+
+    repos = [markdown_parser.extract_github_repo_name(url) for url in repo_urls]
+    repos = [r for r in repos if r]
+
+    saved = 0
+    with Session(engine) as session:
+        for full_name in repos:
+            if session.exec(
+                select(Repository).where(Repository.full_name == full_name)
+            ).first():
+                continue
+
+            repo_data = await github_client.get_repository(full_name)
+            if not repo_data:
+                continue
+
+            metadata = await github_client.get_repository_metadata(full_name)
+            topics_json = json.dumps(metadata.get("topics", [])) if metadata else None
+
+            repo = Repository(
+                name=repo_data["name"],
+                full_name=repo_data["full_name"],
+                description=repo_data.get("description"),
+                github_url=repo_data["html_url"],
+                stars=repo_data.get("stargazers_count"),
+                github_topics=topics_json,
+            )
+            session.add(repo)
+            session.commit()
+            saved += 1
+            print(f"Saved {full_name}")
+            await asyncio.sleep(0.4)  # Rate limiting
+
+    print(f"Total: {saved} repositories")
+    await github_client.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
