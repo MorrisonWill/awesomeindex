@@ -282,6 +282,36 @@
             font-weight: 600;
         }
 
+        /* Topics styling */
+        .topics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .topic-tag {
+            padding: 0.125rem 0.5rem;
+            font-size: 11px;
+            background: var(--tag-bg, #dbeafe);
+            color: var(--tag-fg, #1e40af);
+            border-radius: 9999px;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .topic-tag {
+                background: #1e3a5f;
+                color: #93c5fd;
+            }
+        }
+
+        .topic-tag:hover {
+            opacity: 0.8;
+            text-decoration: none;
+        }
+
         .no-results {
             text-align: center;
             padding: 4rem 2rem;

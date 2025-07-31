@@ -1,0 +1,58 @@
+{% for project in results.hits %}
+    <div class="project">
+        <h3>
+            {% if project.url %}
+                <a href="{{ project.url }}" target="_blank" rel="noopener">{{ project.name }}</a>
+            {% else %}{{ project.name }}{% endif %}
+        </h3>
+        {% if project.description %}<p>{{ project.description }}</p>{% endif %}
+        <div class="meta">
+            <span>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"/>
+                </svg>
+                {% if project.repository_name.startswith('awesome-') %}
+                    {{ project.repository_name[8:] }}
+                {% else %}
+                    {{ project.repository_name }}
+                {% endif %}
+            </span>
+            {% if project.category and project.category != project.repository_name %}
+                <span>{{ project.category }}</span>
+            {% endif %}
+            {% if project.github_stars %}
+                <span class="stars">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/>
+                    </svg>
+                    {{ "{:,}".format(project.github_stars) }}
+                </span>
+            {% endif %}
+            {% if project.github_language %}
+                <span>{{ project.github_language }}</span>
+            {% endif %}
+        </div>
+        {% if project.github_topics %}
+            <div class="topics">
+                {% for topic in project.github_topics[:8] %}
+                    <a href="#" onclick="searchTopic('{{ topic }}'); return false;" class="topic-tag">{{ topic }}</a>
+                {% endfor %}
+                {% if project.github_topics|length > 8 %}
+                    <span class="topic-tag" style="opacity: 0.7">+{{ project.github_topics|length - 8 }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}
+
+{% if results.has_more %}
+    <div hx-get="/search?q={{ query }}&offset={{ next_offset }}&sort=
+
+            {{ filters.sort }}{% if filters.repository %}&repository={{ filters.repository }}{% endif %}{% if filters.language %}&language={{ filters.language }}{% endif %}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.min_stars %}&min_stars={{ filters.min_stars }}{% endif %}{% if filters.topics %}&topics={{ filters.topics }}{% endif %}"
+         hx-trigger="revealed"
+         hx-target="this"
+         hx-swap="outerHTML"
+         style="text-align: center; padding: 2rem; color: var(--text-muted);">
+        Loading more...
+    </div>
+{% endif %}

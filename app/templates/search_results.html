@@ -40,8 +40,31 @@
                         <span>{{ project.github_language }}</span>
                     {% endif %}
                 </div>
+                {% if project.github_topics %}
+                    <div class="topics">
+                        {% for topic in project.github_topics[:8] %}
+                            <a href="#" onclick="searchTopic('{{ topic }}'); return false;"
+                               class="topic-tag">{{ topic }}</a>
+                        {% endfor %}
+                        {% if project.github_topics|length > 8 %}
+                            <span class="topic-tag" style="opacity: 0.7">+{{ project.github_topics|length - 8 }}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         {% endfor %}
+
+        {% if results.has_more %}
+            <div hx-get="/search?q={{ query }}&offset={{ next_offset }}&sort=
+
+                    {{ filters.sort }}{% if filters.repository %}&repository={{ filters.repository }}{% endif %}{% if filters.language %}&language={{ filters.language }}{% endif %}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.min_stars %}&min_stars={{ filters.min_stars }}{% endif %}{% if filters.topics %}&topics={{ filters.topics }}{% endif %}"
+                 hx-trigger="revealed"
+                 hx-target="this"
+                 hx-swap="outerHTML"
+                 style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Loading more...
+            </div>
+        {% endif %}
     </div>
 {% else %}
     <div class="no-results">

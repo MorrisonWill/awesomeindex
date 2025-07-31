@@ -2,12 +2,14 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from contextlib import asynccontextmanager
+import json
 
 from app.config import settings
 from app.database import create_db_and_tables
 from app.routers import search, projects
 from app.internal.search import search_service
 from sqlmodel import Session, select
+from sqlalchemy import func
 from app.database import engine, get_session
 from app.models.project import Project
 from app.models.repository import Repository
@@ -69,6 +71,9 @@ async def browse_projects(
             statement = statement.where(Project.github_stars >= min_stars)
         if topics:
             # Filter by topics (comma-separated)
+            # Handle both string and list inputs
+            if isinstance(topics, list):
+                topics = topics[0] if topics else ""
             topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
             for topic in topic_list:
                 statement = statement.where(
@@ -94,6 +99,15 @@ async def browse_projects(
         for project in projects:
             # Get repository name
             repo = session.get(Repository, project.repository_id)
+            
+            # Parse topics from JSON
+            topics = []
+            if project.github_topics:
+                try:
+                    topics = json.loads(project.github_topics)
+                except:
+                    pass
+                    
             hits.append({
                 "id": project.id,
                 "name": project.name,
@@ -102,18 +116,46 @@ async def browse_projects(
                 "category": project.category,
                 "github_stars": project.github_stars,
                 "github_language": project.github_language,
+                "github_topics": topics,
                 "repository_name": repo.name if repo else "",
             })
         
+        # Get total count for display
+        count_statement = select(func.count(Project.id))
+        if repository:
+            repo = session.exec(select(Repository).where(Repository.name == repository)).first()
+            if repo:
+                count_statement = count_statement.where(Project.repository_id == repo.id)
+        if category:
+            count_statement = count_statement.where(Project.category == category)
+        if language:
+            count_statement = count_statement.where(Project.github_language == language)
+        if min_stars > 0:
+            count_statement = count_statement.where(Project.github_stars >= min_stars)
+        if topics:
+            # Handle both string and list inputs
+            if isinstance(topics, list):
+                topics = topics[0] if topics else ""
+            topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
+            for topic in topic_list:
+                count_statement = count_statement.where(
+                    Project.github_topics.contains(f'"{topic}"')
+                )
+        
+        total_count = session.exec(count_statement).one()
+        
         results = {
             "hits": hits,
-            "total": len(hits),
+            "total": total_count,
             "offset": offset,
             "has_more": has_more,
         }
         
+        # Use different template for infinite scroll continuation
+        template_name = "browse_more.html" if offset > 0 else "browse_results.html"
+        
         return templates.TemplateResponse(
-            "browse_results.html", 
+            template_name, 
             {
                 "request": request, 
                 "results": results, 
@@ -141,6 +183,7 @@ async def search_frontend(
     min_stars: int = 0,
     topics: str = "",
     limit: int = 20,
+    offset: int = 0,
 ):
     """Frontend search endpoint that returns HTML"""
     from app.routers.search import build_filters
@@ -179,13 +222,34 @@ async def search_frontend(
             query=q,
             filters=filter_string,
             sort=sort_param,
-            limit=limit,
-            offset=0,
+            limit=limit + 1,  # Get one extra to check if there are more
+            offset=offset,
         )
         
+        # Check if there are more results
+        has_more = len(results["hits"]) > limit
+        results["hits"] = results["hits"][:limit]
+        results["has_more"] = has_more
+        
+        # Use different template for infinite scroll continuation
+        template_name = "search_more.html" if offset > 0 else "search_results.html"
+        
         return templates.TemplateResponse(
-            "search_results.html", 
-            {"request": request, "results": results}
+            template_name, 
+            {
+                "request": request, 
+                "results": results,
+                "query": q,
+                "next_offset": offset + limit,
+                "filters": {
+                    "sort": sort,
+                    "repository": repository,
+                    "language": language,
+                    "category": category,
+                    "min_stars": min_stars,
+                    "topics": topics,
+                }
+            }
         )
     except Exception as e:
         return templates.TemplateResponse(

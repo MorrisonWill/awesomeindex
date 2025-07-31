@@ -63,7 +63,7 @@
     <div id="loading" class="loading htmx-indicator">Loading...</div>
 
     <!-- Single content area for both search and browse -->
-    <div id="content" hx-get="/browse" hx-trigger="load" hx-swap="innerHTML">
+    <div id="content" hx-get="/browse" hx-trigger="load delay:100ms" hx-swap="innerHTML">
         <div class="no-results" id="welcome">
             <h3>Search thousands of curated open source projects</h3>
             <p>Type to search across all GitHub awesome lists</p>
@@ -127,6 +127,12 @@
             if (sortSelect && !searchInput.value) {
                 sortSelect.value = 'stars';
             }
+
+            // Global function to search by topic
+            window.searchTopic = function (topic) {
+                searchInput.value = topic;
+                updateContent();
+            };
         });
     </script>
 {% endblock %}
