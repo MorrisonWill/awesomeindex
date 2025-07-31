@@ -48,7 +48,7 @@
 {% if results.has_more %}
     <div hx-get="/search?q={{ query }}&offset={{ next_offset }}&sort=
 
-            {{ filters.sort }}{% if filters.repository %}&repository={{ filters.repository }}{% endif %}{% if filters.language %}&language={{ filters.language }}{% endif %}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.min_stars %}&min_stars={{ filters.min_stars }}{% endif %}{% if filters.topics %}&topics={{ filters.topics }}{% endif %}"
+            {{ filters.sort }}{% if filters.repository %}&repository={{ filters.repository }}{% endif %}{% if filters.language %}&language={{ filters.language }}{% endif %}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.min_stars %}&min_stars={{ filters.min_stars }}{% endif %}"
          hx-trigger="revealed"
          hx-target="this"
          hx-swap="outerHTML"

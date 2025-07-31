@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block search %}
-    <form id="search-form">
+    <form id="search-form" autocomplete="off">
         <div class="search-box">
             <input type="text" name="q" placeholder="Search projects, tools, libraries..." autocomplete="off"
                    class="search-input" autofocus>
@@ -45,11 +45,6 @@
                 <div class="filter-group">
                     <label>Min stars:</label>
                     <input type="number" name="min_stars" value="0" min="0" class="filter-input" placeholder="0">
-                </div>
-                <div class="filter-group">
-                    <label>Topics:</label>
-                    <input type="text" name="topics" class="filter-input" style="width: 200px"
-                           placeholder="e.g. api, testing">
                 </div>
                 <div class="filter-group filter-presets">
                     <button type="button" class="filter-preset" data-preset="clear">Clear Filters</button>

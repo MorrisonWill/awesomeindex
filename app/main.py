@@ -51,7 +51,6 @@ async def browse_projects(
     language: str = "",
     category: str = "",
     min_stars: int = 0,
-    topics: str = "",
 ):
     """Browse all projects with infinite scroll"""
     with Session(engine) as session:
@@ -69,16 +68,6 @@ async def browse_projects(
             statement = statement.where(Project.github_language == language)
         if min_stars > 0:
             statement = statement.where(Project.github_stars >= min_stars)
-        if topics:
-            # Filter by topics (comma-separated)
-            # Handle both string and list inputs
-            if isinstance(topics, list):
-                topics = topics[0] if topics else ""
-            topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
-            for topic in topic_list:
-                statement = statement.where(
-                    Project.github_topics.contains(f'"{topic}"')
-                )
             
         # Apply sorting
         if sort == "stars":
@@ -132,15 +121,6 @@ async def browse_projects(
             count_statement = count_statement.where(Project.github_language == language)
         if min_stars > 0:
             count_statement = count_statement.where(Project.github_stars >= min_stars)
-        if topics:
-            # Handle both string and list inputs
-            if isinstance(topics, list):
-                topics = topics[0] if topics else ""
-            topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
-            for topic in topic_list:
-                count_statement = count_statement.where(
-                    Project.github_topics.contains(f'"{topic}"')
-                )
         
         total_count = session.exec(count_statement).one()
         
@@ -166,7 +146,6 @@ async def browse_projects(
                     "language": language,
                     "category": category,
                     "min_stars": min_stars,
-                    "topics": topics,
                 }
             }
         )
@@ -181,7 +160,6 @@ async def search_frontend(
     sort: str = "relevance",
     language: str = "",
     min_stars: int = 0,
-    topics: str = "",
     limit: int = 20,
     offset: int = 0,
 ):
@@ -199,12 +177,6 @@ async def search_frontend(
     if min_stars > 0:
         filters.append(f"github_stars >= {min_stars}")
     
-    # Handle topics filter
-    if topics:
-        topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
-        topic_filters = [f"github_topics = '{topic}'" for topic in topic_list]
-        if topic_filters:
-            filters.append(f"({' OR '.join(topic_filters)})")
     
     filter_string = " AND ".join(filters) if filters else None
     
@@ -247,7 +219,6 @@ async def search_frontend(
                     "language": language,
                     "category": category,
                     "min_stars": min_stars,
-                    "topics": topics,
                 }
             }
         )
