@@ -121,6 +121,7 @@ class SearchService:
                 "description",
                 "category",
                 "repository_name",
+                "github_topics",
             ]
 
             filterable_attributes = [
@@ -128,7 +129,8 @@ class SearchService:
                 "category",
                 "repository_name",
                 "github_stars",
-                "repository_topics",  # New field for topic filtering
+                "repository_topics",
+                "github_topics",
             ]
 
             sortable_attributes = ["github_stars", "created_at"]
