@@ -81,7 +81,6 @@ class SyncService:
             existing_repo.name = repo_data["name"]
             existing_repo.description = repo_data.get("description")
             existing_repo.stars = repo_data.get("stargazers_count")
-            existing_repo.language = repo_data.get("language")
             existing_repo.updated_at = datetime.utcnow()
             session.add(existing_repo)
             return existing_repo
@@ -93,7 +92,6 @@ class SyncService:
                 description=repo_data.get("description"),
                 github_url=repo_data["html_url"],
                 stars=repo_data.get("stargazers_count"),
-                language=repo_data.get("language"),
             )
             session.add(new_repo)
             session.flush()  # Get the ID

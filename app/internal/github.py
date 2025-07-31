@@ -63,6 +63,7 @@ class GitHubClient:
             content_response.raise_for_status()
             return content_response.text
         except httpx.HTTPError:
+            print(f"Error fetching README for {full_name}: {response.text}")
             return None
 
     async def close(self):
