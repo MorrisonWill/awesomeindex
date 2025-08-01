@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AwesomeIndex{% endblock %}</title>
     <meta name="description" content="Search curated open source projects from GitHub's awesome lists">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}">
     <script src="{{ url_for('static', path='/htmx.min.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
 </head>

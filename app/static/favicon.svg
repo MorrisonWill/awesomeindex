@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <!-- Star shape -->
+    <path d="M16 2l3.5 7.5L28 11l-6 5.5L23.5 25 16 21l-7.5 4 1.5-8.5L4 11l8.5-1.5z" fill="#f59e0b" stroke="#f59e0b"
+          stroke-width="1"/>
+    <!-- Search glass -->
+    <circle cx="20" cy="20" r="7" fill="none" stroke="#1e293b" stroke-width="2.5"/>
+    <path d="M25 25l4 4" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Inner circle -->
+    <circle cx="20" cy="20" r="4" fill="#fff" opacity="0.9"/>
+</svg>
