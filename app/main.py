@@ -81,18 +81,24 @@ async def homepage(request: Request):
             "offset": 0,
             "has_more": total_count > 50,
         }
-        
+
         # Get filter options for server-side rendering
         # Get unique languages
-        lang_statement = select(Project.github_language).distinct().where(Project.github_language != None)
+        lang_statement = (
+            select(Project.github_language)
+            .distinct()
+            .where(Project.github_language != None)
+        )
         languages = [lang for lang in session.exec(lang_statement) if lang]
         languages.sort()
-        
+
         # Get unique categories
-        cat_statement = select(Project.category).distinct().where(Project.category != None)
+        cat_statement = (
+            select(Project.category).distinct().where(Project.category != None)
+        )
         categories = [cat for cat in session.exec(cat_statement) if cat]
         categories.sort()
-        
+
         # Get repositories that have projects
         repo_statement = (
             select(Repository.name)
@@ -139,7 +145,7 @@ async def get_results(
     offset: int = 0,
 ):
     """Unified endpoint for both search and browse functionality"""
-    
+
     # If there's a query, use MeiliSearch
     if q:
         # Build filter string for MeiliSearch
@@ -267,9 +273,13 @@ async def get_results(
             if category:
                 count_statement = count_statement.where(Project.category == category)
             if language:
-                count_statement = count_statement.where(Project.github_language == language)
+                count_statement = count_statement.where(
+                    Project.github_language == language
+                )
             if min_stars > 0:
-                count_statement = count_statement.where(Project.github_stars >= min_stars)
+                count_statement = count_statement.where(
+                    Project.github_stars >= min_stars
+                )
 
             total_count = session.exec(count_statement).one()
 
