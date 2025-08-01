@@ -71,6 +71,7 @@ async def homepage(request: Request):
                     "github_language": project.github_language,
                     "github_topics": topics,
                     "repository_name": repo.name if repo else "",
+                    "repository_url": repo.github_url if repo else "",
                 }
             )
 
@@ -237,6 +238,7 @@ async def get_results(
                         "github_language": project.github_language,
                         "github_topics": topics,
                         "repository_name": repo.name if repo else "",
+                        "repository_url": repo.github_url if repo else "",
                     }
                 )
 

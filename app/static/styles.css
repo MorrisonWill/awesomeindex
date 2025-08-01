@@ -413,6 +413,17 @@ header {
     font-weight: 600;
 }
 
+.repository-link {
+    color: var(--primary);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.repository-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
 /* Topics styling */
 .topics {
     display: flex;

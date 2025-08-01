@@ -174,24 +174,20 @@ async def main():
                     category=p.category,
                 )
 
-                # Enrich GitHub projects with better rate limit handling
+                # Enrich GitHub projects - client handles rate limiting automatically
                 if p.url and "github.com" in p.url:
                     github_repo = markdown_parser.extract_github_repo_name(p.url)
                     if github_repo:
                         try:
-                            # Check rate limit before making request
-                            if github_client.rate_limit_remaining is not None and github_client.rate_limit_remaining < 10:
-                                print(f"  ⚠ Low rate limit ({github_client.rate_limit_remaining} remaining), skipping enrichment")
-                            else:
-                                data = await github_client.get_repository(github_repo)
-                                if data:
-                                    project.github_stars = data.get("stargazers_count", 0)
-                                    project.github_language = data.get("language", "")
-                                    project.github_topics = json.dumps(
-                                        data.get("topics", [])
-                                    )
-                                # Add delay to avoid hitting rate limits
-                                await asyncio.sleep(0.5)
+                            data = await github_client.get_repository(github_repo)
+                            if data:
+                                project.github_stars = data.get("stargazers_count", 0)
+                                project.github_language = data.get("language", "")
+                                project.github_topics = json.dumps(
+                                    data.get("topics", [])
+                                )
+                            # Small delay to be respectful of API
+                            await asyncio.sleep(0.1)
                         except Exception as e:
                             print(f"  ⚠ Error enriching {github_repo}: {str(e)}")
                             pass
@@ -232,6 +228,7 @@ async def main():
                         "github_topics": project_topics,
                         "repository_id": repo.id,
                         "repository_name": repo.name,
+                        "repository_url": repo.github_url,
                         "repository_topics": repo_topics,
                         "created_at": project.created_at.isoformat()
                         if project.created_at

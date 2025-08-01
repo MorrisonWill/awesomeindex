@@ -43,8 +43,10 @@ class GitHubClient:
                 if reset_time:
                     wait_time = reset_time - int(time.time()) + 1
                     if wait_time > 0:
-                        print(f"Rate limit exceeded. Waiting {wait_time} seconds until reset...")
+                        reset_datetime = datetime.fromtimestamp(reset_time).strftime("%Y-%m-%d %H:%M:%S")
+                        print(f"  ⏳ GitHub rate limit reached. Waiting {wait_time} seconds (until {reset_datetime})...")
                         await asyncio.sleep(wait_time)
+                        print(f"  ✓ Rate limit reset. Continuing...")
                         return True
         return False
 
