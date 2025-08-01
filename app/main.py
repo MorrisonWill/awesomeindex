@@ -164,7 +164,7 @@ async def homepage(request: Request):
                 "request": request,
                 "initial_results": initial_results,
                 "query": "",
-                "next_offset": 50,
+                "next_offset": 20,
                 "filters": {
                     "sort": "stars",
                     "repository": "",
@@ -191,7 +191,7 @@ async def get_results(
     sort: str = "stars",
     language: str = "",
     min_stars: int = 0,
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
 ):
     """Unified endpoint for both search and browse functionality"""

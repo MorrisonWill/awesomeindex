@@ -79,7 +79,7 @@ class SearchService:
         query: str,
         filters: Optional[str] = None,
         sort: Optional[List[str]] = None,
-        limit: int = 50,
+        limit: int = 20,
         offset: int = 0,
     ) -> Dict[str, Any]:
         """Search projects with optional filters"""

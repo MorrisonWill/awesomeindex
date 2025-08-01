@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 async def list_projects(
     repository_id: Optional[int] = None,
     category: Optional[str] = None,
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
     session: Session = Depends(get_session),
 ):
@@ -46,7 +46,7 @@ async def get_project(project_id: int, session: Session = Depends(get_session)):
 @router.get("/repository/{repository_id}", response_model=List[Project])
 async def get_projects_by_repository(
     repository_id: int,
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
     session: Session = Depends(get_session),
 ):
