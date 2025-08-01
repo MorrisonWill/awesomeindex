@@ -51,9 +51,20 @@ class SearchService:
         try:
             client = await self.get_client()
             index = client.index(self.index_name)
-            await index.add_documents(projects)
+            # Index in batches to avoid timeouts
+            batch_size = 1000
+            for i in range(0, len(projects), batch_size):
+                batch = projects[i:i + batch_size]
+                print(f"  Indexing batch {i//batch_size + 1}/{(len(projects) + batch_size - 1)//batch_size} ({len(batch)} documents)...")
+                task = await index.add_documents(batch)
+                # Wait for the task to complete
+                await client.wait_for_task(task.task_uid, timeout_in_ms=300000)  # 5 minute timeout
+                print(f"  ✓ Batch {i//batch_size + 1} indexed")
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Error indexing projects: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     async def search_projects(

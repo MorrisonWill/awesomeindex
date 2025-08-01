@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 
 {% block search %}
-    <form id="search-form" autocomplete="off">
+    <form id="search-form" autocomplete="off"
+          hx-get="/results"
+          hx-trigger="keyup changed delay:300ms from:input[name='q'], change from:select, change from:input[type='number']"
+          hx-target="#content"
+          hx-include="this">
         <div class="search-box">
             <input type="text" name="q" placeholder="Search projects, tools, libraries..." autocomplete="off"
                    class="search-input" autofocus>
@@ -82,11 +86,11 @@
     <div id="loading" class="loading htmx-indicator">Loading...</div>
 
     <!-- Single content area for both search and browse -->
-    <div id="content">
+    <div id="content" hx-indicator="#loading">
         {% if initial_results %}
             <!-- Render initial browse results server-side to avoid flicker -->
-            {% with results=initial_results %}
-                {% include "search_results.html" %}
+            {% with results=initial_results, query="" %}
+                {% include "results.html" %}
             {% endwith %}
         {% else %}
             <div class="no-results" id="welcome">
@@ -98,10 +102,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const form = document.querySelector('#search-form');
-            const searchInput = document.querySelector('.search-input');
-            const content = document.querySelector('#content');
-            const loading = document.querySelector('#loading');
             const filterToggle = document.querySelector('.filter-toggle');
             const filters = document.querySelector('#filters');
 
@@ -114,61 +114,24 @@
                 });
             }
 
-            // Function to get form data
-            function getFormData() {
-                const formData = new FormData(form);
-                const params = new URLSearchParams(formData);
-                return params.toString();
-            }
-
-            // Function to update content
-            function updateContent() {
-                const query = searchInput.value.trim();
-                const params = getFormData();
-                const url = query ? `/search?${params}` : `/browse?${params}`;
-
-                // Show loading
-                loading.style.display = 'block';
-
-                // Fetch content
-                htmx.ajax('GET', url, {
-                    target: '#content',
-                    swap: 'innerHTML'
-                }).then(() => {
-                    loading.style.display = 'none';
-                });
-            }
-
-            // Search input handler (with debounce)
-            let searchTimeout;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(updateContent, 300);
-            });
-
-            // Filter change handlers
-            form.querySelectorAll('.filter-select, .filter-input').forEach(el => {
-                el.addEventListener('change', updateContent);
-            });
-
             // Clear filters button
-            document.querySelector('.filter-preset[data-preset="clear"]')?.addEventListener('click', () => {
-                form.reset();
-                form.querySelector('[name="sort"]').value = 'stars';
-                searchInput.value = '';
-                updateContent();
-            });
-
-            // Set default sort
-            const sortSelect = form.querySelector('[name="sort"]');
-            if (sortSelect && !searchInput.value) {
-                sortSelect.value = 'stars';
+            const clearBtn = document.querySelector('.filter-preset[data-preset="clear"]');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    const form = document.querySelector('#search-form');
+                    form.reset();
+                    form.querySelector('[name="sort"]').value = 'stars';
+                    // Trigger HTMX to update results
+                    htmx.trigger(form, 'submit');
+                });
             }
 
             // Global function to search by topic
             window.searchTopic = function (topic) {
+                const searchInput = document.querySelector('.search-input');
                 searchInput.value = topic;
-                updateContent();
+                // Trigger HTMX to update results
+                htmx.trigger(searchInput, 'keyup');
             };
         });
     </script>

@@ -24,8 +24,12 @@ async def search_projects(
     repository: Optional[str] = Query(None, description="Filter by repository name"),
     language: Optional[str] = Query(None, description="Filter by programming language"),
     min_stars: int = Query(0, ge=0, description="Minimum GitHub stars"),
-    topics: Optional[str] = Query(None, description="Filter by topics (comma-separated)"),
-    sort: str = Query("relevance", description="Sort order: relevance, stars, recent, name"),
+    topics: Optional[str] = Query(
+        None, description="Filter by topics (comma-separated)"
+    ),
+    sort: str = Query(
+        "relevance", description="Sort order: relevance, stars, recent, name"
+    ),
     limit: int = Query(20, ge=1, le=100, description="Number of results to return"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
 ) -> Dict[str, Any]:
@@ -41,16 +45,16 @@ async def search_projects(
         filters.append(f"github_language = '{language}'")
     if min_stars > 0:
         filters.append(f"github_stars >= {min_stars}")
-    
+
     # Handle topics filter
     if topics:
-        topic_list = [t.strip().lower() for t in topics.split(',') if t.strip()]
+        topic_list = [t.strip().lower() for t in topics.split(",") if t.strip()]
         topic_filters = [f"github_topics = '{topic}'" for topic in topic_list]
         if topic_filters:
             filters.append(f"({' OR '.join(topic_filters)})")
-    
+
     filter_string = " AND ".join(filters) if filters else None
-    
+
     # Prepare sort parameter
     sort_param = None
     if sort == "stars":
@@ -71,27 +75,3 @@ async def search_projects(
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
-
-
-@router.get("/stats")
-async def get_search_stats() -> Dict[str, Any]:
-    """Get search index statistics"""
-    try:
-        stats = await search_service.get_search_stats()
-        return stats
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Stats error: {str(e)}")
-
-
-@router.post("/reindex")
-async def reindex_all():
-    """Re-index all projects (admin endpoint)"""
-    try:
-        # Clear existing index
-        await search_service.clear_index()
-
-        # Re-run the parsing and indexing
-        # This would typically trigger a background job
-        return {"message": "Reindexing started"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Reindex error: {str(e)}")

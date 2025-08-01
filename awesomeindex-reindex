@@ -110,7 +110,23 @@ async def main():
 
         # Reindex all projects
         print("Indexing projects...")
-        await search_service.index_projects(search_docs)
+        print(f"MeiliSearch URL: {search_service.url}")
+        print(f"MeiliSearch has API key: {'Yes' if search_service.api_key else 'No'}")
+
+        # Test connection first
+        try:
+            client = await search_service.get_client()
+            health = await client.health()
+            print(f"MeiliSearch health: {health}")
+        except Exception as e:
+            print(f"Failed to connect to MeiliSearch: {e}")
+            print("Make sure MeiliSearch is running and accessible")
+            return
+
+        success = await search_service.index_projects(search_docs)
+        if not success:
+            print("Failed to index projects")
+            return
 
         # Get stats to verify
         stats = await search_service.get_search_stats()
