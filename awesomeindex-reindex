@@ -113,9 +113,9 @@ async def main():
         await search_service.index_projects(search_docs)
 
         # Get stats to verify
-        stats = await search_service.get_stats()
+        stats = await search_service.get_search_stats()
         print(
-            f"\n✓ Successfully reindexed {stats.get('totalDocuments', 'unknown')} projects"
+            f"\n✓ Successfully reindexed {stats.get('total_documents', 'unknown')} projects"
         )
 
         # Print some statistics
