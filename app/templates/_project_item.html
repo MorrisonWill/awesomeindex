@@ -12,14 +12,14 @@
             </svg>
             {% if project.repository_url %}
                 <a href="{{ project.repository_url }}" target="_blank" rel="noopener" class="repository-link">
-                    {% if project.repository_name.startswith('awesome-') %}
+                    {% if project.repository_name.lower().startswith('awesome-') %}
                         {{ project.repository_name[8:] }}
                     {% else %}
                         {{ project.repository_name }}
                     {% endif %}
                 </a>
             {% else %}
-                {% if project.repository_name.startswith('awesome-') %}
+                {% if project.repository_name.lower().startswith('awesome-') %}
                     {{ project.repository_name[8:] }}
                 {% else %}
                     {{ project.repository_name }}

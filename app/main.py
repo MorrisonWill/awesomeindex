@@ -15,6 +15,48 @@ from app.models.project import Project
 from app.models.repository import Repository
 
 
+def deduplicate_by_url(hits):
+    """
+    Deduplicate hits by URL, keeping the project from the repository with most stars.
+    """
+    # Group by URL and keep the best one from each group
+    url_to_best_hit = {}
+
+    for hit in hits:
+        url = hit["url"]
+
+        if url not in url_to_best_hit:
+            url_to_best_hit[url] = hit
+        else:
+            # Keep the hit from the repository with more stars
+            current_best = url_to_best_hit[url]
+
+            # Get repository stars for comparison (fallback to 0 if missing)
+            current_repo_stars = current_best.get("repository_stars", 0)
+            new_repo_stars = hit.get("repository_stars", 0)
+
+            # If repo stars are equal, prefer higher project stars
+            if new_repo_stars > current_repo_stars:
+                url_to_best_hit[url] = hit
+            elif new_repo_stars == current_repo_stars:
+                current_project_stars = current_best.get("github_stars", 0) or 0
+                new_project_stars = hit.get("github_stars", 0) or 0
+                if new_project_stars > current_project_stars:
+                    url_to_best_hit[url] = hit
+
+    # Return deduplicated hits in original order
+    deduplicated = []
+    seen_urls = set()
+
+    for hit in hits:
+        url = hit["url"]
+        if url not in seen_urls and url_to_best_hit.get(url) == hit:
+            deduplicated.append(hit)
+            seen_urls.add(url)
+
+    return deduplicated
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -72,14 +114,18 @@ async def homepage(request: Request):
                     "github_topics": topics,
                     "repository_name": repo.name if repo else "",
                     "repository_url": repo.github_url if repo else "",
+                    "repository_stars": repo.stars if repo else 0,
                 }
             )
 
+        # Apply deduplication
+        hits = deduplicate_by_url(hits)
+
         initial_results = {
             "hits": hits,
-            "total": total_count,
+            "total": len(hits),  # Use deduplicated count for display
             "offset": 0,
-            "has_more": total_count > 50,
+            "has_more": len(hits) >= 50,  # Check if we got the full limit
         }
 
         # Get filter options for server-side rendering
@@ -184,7 +230,7 @@ async def get_results(
             results["hits"] = results["hits"][:limit]
             results["has_more"] = has_more
 
-            # Enrich hits with repository URLs if missing
+            # Enrich hits with repository URLs and stars if missing
             with Session(engine) as session:
                 for hit in results["hits"]:
                     if "repository_url" not in hit and "repository_id" in hit:
@@ -195,6 +241,19 @@ async def get_results(
                         ).first()
                         if repo:
                             hit["repository_url"] = repo.github_url
+                            hit["repository_stars"] = repo.stars
+                    elif "repository_stars" not in hit and "repository_name" in hit:
+                        # If we have repository_name but missing stars, look it up
+                        repo = session.exec(
+                            select(Repository).where(
+                                Repository.name == hit["repository_name"]
+                            )
+                        ).first()
+                        if repo:
+                            hit["repository_stars"] = repo.stars
+
+            # Apply deduplication
+            results["hits"] = deduplicate_by_url(results["hits"])
         except Exception as e:
             results = {"hits": [], "total": 0, "has_more": False, "error": str(e)}
     else:
@@ -257,8 +316,12 @@ async def get_results(
                         "github_topics": topics,
                         "repository_name": repo.name if repo else "",
                         "repository_url": repo.github_url if repo else "",
+                        "repository_stars": repo.stars if repo else 0,
                     }
                 )
+
+            # Apply deduplication
+            hits = deduplicate_by_url(hits)
 
             # Get total count for display
             count_statement = select(func.count(Project.id))

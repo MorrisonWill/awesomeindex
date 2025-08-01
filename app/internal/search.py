@@ -54,7 +54,7 @@ class SearchService:
             client = await self.get_client()
             index = client.index(self.index_name)
             # Index in batches to avoid timeouts
-            batch_size = 1000
+            batch_size = 10000
             for i in range(0, len(projects), batch_size):
                 batch = projects[i : i + batch_size]
                 print(
