@@ -31,7 +31,6 @@ A web platform that:
 
 ### Frontend
 - **HTMX** - Dynamic interactions without JavaScript frameworks
-- **Alpine.js** - Minimal JavaScript for UI components
 - **Jinja2** - Server-side templating
 - **CSS** - Custom responsive styling
 
@@ -55,31 +54,28 @@ awesomeindex/
 │   │   ├── __init__.py      # Internal module init
 │   │   ├── github.py        # GitHub API client with authentication
 │   │   ├── parser.py        # Markdown parsing service (awesome list extraction)
-│   │   ├── search.py        # MeiliSearch integration (skeleton)
+│   │   ├── search.py        # MeiliSearch integration
 │   │   └── sync.py          # Data synchronization orchestration
 │   ├── routers/             # FastAPI route handlers
 │   │   ├── __init__.py      # Router setup
 │   │   ├── search.py        # Search API endpoints
 │   │   └── projects.py      # Project API endpoints
 │   ├── templates/           # Jinja2 HTML templates
-│   │   ├── base.html        # Base layout with HTMX/Alpine
+│   │   ├── base.html        # Base layout with HTMX
 │   │   ├── index.html       # Homepage with search interface
-│   │   └── search_results.html # Search results partial
+│   │   ├── results.html     # Unified results template
+│   │   ├── results_more.html # Infinite scroll continuation
+│   │   └── _project_item.html # Reusable project display partial
 │   └── static/              # Self-hosted assets
 │       ├── htmx.min.js      # HTMX library
-│       └── alpine.min.js    # Alpine.js library
-├── scripts/                 # Utility and data management scripts
-│   ├── __init__.py          # Scripts package init
-│   ├── seed_repositories.py # Repository seeding from sindresorhus/awesome
-│   ├── import_repositories.py # JSON backup import utility
-│   ├── parse_projects.py    # Parse projects from repository READMEs and index in MeiliSearch
-│   └── test_search.py       # Test MeiliSearch functionality
+│       └── styles.css       # Extracted CSS styles
 ├── .env                     # Environment configuration (GitHub token, DB path)
-├── awesomeindex.db        # SQLite database file
+├── awesomeindex.db         # SQLite database file
 ├── awesome-repositories-backup.json # Repository data backup
-├── pyproject.toml           # uv project configuration
-├── uv.lock                  # Dependency lock file
-└── CLAUDE.md               # This file
+├── pyproject.toml          # uv project configuration
+├── uv.lock                 # Dependency lock file
+├── README.md               # Project documentation
+└── CLAUDE.md              # This file
 ```
 
 ## Key Features
@@ -114,10 +110,9 @@ awesomeindex/
 
 ### Search API (`/api/search/`)
 
-- `GET /api/search/?q={query}&category={category}&repository={repository}&limit={limit}&offset={offset}` - Search
-  projects with filtering
-- `GET /api/search/stats` - Get search index statistics
-- `POST /api/search/reindex` - Re-index all projects (admin)
+-
+`GET /api/search/?q={query}&category={category}&repository={repository}&language={language}&min_stars={min_stars}&topics={topics}&sort={sort}&limit={limit}&offset={offset}` -
+Search projects with filtering and sorting
 
 ### Project API (`/api/projects/`)
 
@@ -126,11 +121,15 @@ awesomeindex/
 - `GET /api/projects/repository/{repository_id}` - Get projects from specific repository
 - `GET /api/projects/categories/` - Get all unique categories
 - `GET /api/projects/repositories/` - Get all repositories with projects
+- `GET /api/projects/languages/` - Get all unique programming languages
+- `GET /api/projects/topics/` - Get popular topics from projects
 
 ### Frontend Routes
 
-- `GET /` - Homepage with search interface
-- `GET /search?q={query}&category={category}&repository={repository}` - Search results (returns HTML for HTMX)
+- `GET /` - Homepage with search interface (pre-renders top projects)
+-
+`GET /results?q={query}&category={category}&repository={repository}&sort={sort}&language={language}&min_stars={min_stars}` -
+Unified search/browse results (returns HTML for HTMX)
 
 ## Development Workflow
 
@@ -193,10 +192,11 @@ uv run python cli.py test
 ## Architecture Decisions
 
 ### Why This Stack?
-- **HTMX over React**: Simpler deployment, better SEO, faster development
+
+- **HTMX over React**: Simpler deployment, better SEO, faster development, minimal JavaScript
 - **SQLite over PostgreSQL**: Easier setup, sufficient scale, simpler ops
-- **MeiliSearch over Elasticsearch**: Better developer experience, faster setup
-- **FastAPI over Django**: Better type safety, modern async support
+- **MeiliSearch over Elasticsearch**: Better developer experience, faster setup, typo-tolerant search
+- **FastAPI over Django**: Better type safety, modern async support, automatic API documentation
 - **uv over pip**: Faster dependency resolution and installation
 
 ### Key Design Principles
@@ -220,19 +220,21 @@ uv run python cli.py test
 - JSON backup/restore functionality for repository data
 - **MeiliSearch integration with async client** - Full search service implementation
 - **Project parsing and indexing** - 559 projects parsed and indexed from 3 repositories
-- **Complete API routes** - Search, projects, categories, and repositories endpoints
+- **Complete API routes** - Search, projects, categories, languages, topics, and repositories endpoints
 - **HTMX frontend integration** - Real-time search with filtering and responsive UI
-- Self-hosted static assets (HTMX, Alpine.js)
+- **Unified search/browse endpoint** - Single `/results` endpoint handles both search and browse modes
+- **Simplified frontend architecture** - Consolidated templates, extracted CSS, removed unused dependencies
+- Self-hosted static assets (HTMX only, removed Alpine.js)
 - FastAPI application structure with database setup and search initialization
+- CLI interface for database operations (`cli.py`)
 
 📋 **Next Steps:**
 - Add comprehensive error handling and logging
-- Implement CLI commands for sync operations
 - Parse projects from all 30+ repositories in database
-- Add pagination for large result sets
 - Create admin interface for repository management
-- Add project metadata enrichment (GitHub stars, languages)
+- Add project metadata enrichment (GitHub stars, languages, topics)
 - Implement caching strategies for frequently searched terms
+- Add automated sync operations for keeping data fresh
 
 ## Data Status
 
@@ -279,8 +281,13 @@ uv run python cli.py test
 - **HTMX Integration**: HTMX works excellently for real-time search with minimal JavaScript:
     - 300ms delay prevents excessive API calls during typing
     - Server-side rendering keeps SEO benefits while adding interactivity
-    - Filter dropdowns populated via vanilla JavaScript and API calls
-- **CSS Styling**: Custom CSS with flexbox provides responsive design without frameworks
+  - Unified `/results` endpoint simplifies data flow
+  - Native HTMX attributes instead of manual ajax calls
+- **Template Consolidation**: Reduced from 6 templates to 4 by:
+    - Creating reusable `_project_item.html` partial
+    - Merging search/browse templates into unified `results.html`
+    - Single `results_more.html` for infinite scroll
+- **CSS Organization**: Extracted 470+ lines of inline CSS to separate `styles.css` file for better maintainability
 
 ### Performance
 

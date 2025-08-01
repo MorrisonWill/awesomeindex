@@ -154,6 +154,9 @@ class SearchService:
             await index.update_searchable_attributes(searchable_attributes)
             await index.update_filterable_attributes(filterable_attributes)
             await index.update_sortable_attributes(sortable_attributes)
+            
+            # Increase max total hits to allow more results
+            await index.update_pagination(max_total_hits=20000)
 
         except Exception:
             pass
