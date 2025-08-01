@@ -177,6 +177,18 @@ async def get_results(
             has_more = len(results["hits"]) > limit
             results["hits"] = results["hits"][:limit]
             results["has_more"] = has_more
+
+            # Enrich hits with repository URLs if missing
+            with Session(engine) as session:
+                for hit in results["hits"]:
+                    if "repository_url" not in hit and "repository_id" in hit:
+                        repo = session.exec(
+                            select(Repository).where(
+                                Repository.id == hit["repository_id"]
+                            )
+                        ).first()
+                        if repo:
+                            hit["repository_url"] = repo.github_url
         except Exception as e:
             results = {"hits": [], "total": 0, "has_more": False, "error": str(e)}
     else:
