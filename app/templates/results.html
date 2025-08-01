@@ -1,0 +1,32 @@
+{% if results.hits %}
+    {% if query %}
+        <div class="results-header">
+            <strong>{{ results.total }}</strong> results
+            {% if results.processing_time_ms %}
+                <span style="float: right;">{{ results.processing_time_ms }}ms</span>
+            {% endif %}
+        </div>
+    {% endif %}
+    <div class="results" {% if not query %}id="results-list"{% endif %}>
+        {% for project in results.hits %}
+            {% include "_project_item.html" %}
+        {% endfor %}
+
+        {% if results.has_more %}
+            <div hx-get="/results?{% if query %}q={{ query }}&{% endif %}offset={{ next_offset }}&sort=
+
+                    {{ filters.sort }}{% if filters.repository %}&repository={{ filters.repository }}{% endif %}{% if filters.language %}&language={{ filters.language }}{% endif %}{% if filters.category %}&category={{ filters.category }}{% endif %}{% if filters.min_stars %}&min_stars={{ filters.min_stars }}{% endif %}"
+                 hx-trigger="revealed"
+                 hx-target="this"
+                 hx-swap="outerHTML"
+                 style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                Loading more...
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="no-results">
+        <h3>No results found</h3>
+        <p>Try searching with different keywords</p>
+    </div>
+{% endif %}
