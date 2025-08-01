@@ -38,7 +38,58 @@ app.include_router(projects.router)
 
 @app.get("/")
 async def homepage(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Fetch initial browse results to avoid flicker
+    with Session(engine) as session:
+        # Get top 50 projects sorted by stars
+        statement = select(Project).order_by(Project.github_stars.desc()).offset(0).limit(50)
+        projects = session.exec(statement).all()
+        
+        # Get total count
+        total_count = session.exec(select(func.count(Project.id))).one()
+        
+        # Convert to search result format
+        hits = []
+        for project in projects:
+            repo = session.get(Repository, project.repository_id)
+            topics = []
+            if project.github_topics:
+                try:
+                    topics = json.loads(project.github_topics)
+                except:
+                    pass
+            
+            hits.append({
+                "id": project.id,
+                "name": project.name,
+                "description": project.description,
+                "url": project.url,
+                "category": project.category,
+                "github_stars": project.github_stars,
+                "github_language": project.github_language,
+                "github_topics": topics,
+                "repository_name": repo.name if repo else "",
+            })
+        
+        initial_results = {
+            "hits": hits,
+            "total": total_count,
+            "offset": 0,
+            "has_more": total_count > 50,
+        }
+        
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "initial_results": initial_results,
+            "query": "",
+            "next_offset": 50,
+            "filters": {
+                "sort": "stars",
+                "repository": "",
+                "language": "",
+                "category": "",
+                "min_stars": 0,
+            }
+        })
 
 
 @app.get("/browse")

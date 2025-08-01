@@ -58,11 +58,18 @@
     <div id="loading" class="loading htmx-indicator">Loading...</div>
 
     <!-- Single content area for both search and browse -->
-    <div id="content" hx-get="/browse" hx-trigger="load delay:100ms" hx-swap="innerHTML">
-        <div class="no-results" id="welcome">
-            <h3>Search thousands of curated open source projects</h3>
-            <p>Type to search across all GitHub awesome lists</p>
-        </div>
+    <div id="content">
+        {% if initial_results %}
+            <!-- Render initial browse results server-side to avoid flicker -->
+            {% with results=initial_results %}
+                {% include "search_results.html" %}
+            {% endwith %}
+        {% else %}
+            <div class="no-results" id="welcome">
+                <h3>Search thousands of curated open source projects</h3>
+                <p>Type to search across all GitHub awesome lists</p>
+            </div>
+        {% endif %}
     </div>
 
     <script>
