@@ -343,7 +343,11 @@
     <header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <a href="/" class="logo">AwesomeIndex</a>
-            <div class="stats" id="stats"></div>
+            <div class="stats" id="stats">
+                {% if filter_options and filter_options.total_projects %}
+                    {{ filter_options.total_projects }} projects indexed
+                {% endif %}
+            </div>
         </div>
         {% block search %}{% endblock %}
     </header>
@@ -374,64 +378,8 @@
             }
         });
 
-        // Load stats
-        fetch('/api/search/stats')
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('stats').textContent =
-                    `${data.total_documents || 0} projects indexed`;
-            })
-            .catch(() => {
-                document.getElementById('stats').textContent = '';
-            });
-
-        // Load filter options
-        Promise.all([
-            fetch('/api/projects/languages/').then(r => r.json()),
-            fetch('/api/projects/categories/').then(r => r.json()),
-            fetch('/api/projects/repositories/').then(r => r.json())
-        ]).then(([langData, catData, repoData]) => {
-            // Populate languages
-            const langSelects = document.querySelectorAll('.language-filter');
-            langSelects.forEach(select => {
-                langData.languages?.forEach(lang => {
-                    if (lang) {
-                        const option = document.createElement('option');
-                        option.value = lang;
-                        option.textContent = lang;
-                        select.appendChild(option);
-                    }
-                });
-            });
-
-            // Populate categories
-            const catSelects = document.querySelectorAll('.category-filter');
-            catSelects.forEach(select => {
-                catData.categories?.forEach(cat => {
-                    if (cat) {
-                        const option = document.createElement('option');
-                        option.value = cat;
-                        option.textContent = cat;
-                        select.appendChild(option);
-                    }
-                });
-            });
-
-            // Populate repositories
-            const repoSelects = document.querySelectorAll('.repository-filter');
-            repoSelects.forEach(select => {
-                repoData.forEach(repo => {
-                    const option = document.createElement('option');
-                    option.value = repo.name;
-                    // Strip 'awesome-' prefix for cleaner display
-                    const displayName = repo.name.startsWith('awesome-')
-                        ? repo.name.substring(8)
-                        : repo.name;
-                    option.textContent = displayName;
-                    select.appendChild(option);
-                });
-            });
-        });
+        // Stats and filter options are now loaded server-side to prevent flicker
+        // The data is passed from the backend and rendered directly in the HTML
     });
 </script>
 </body>
