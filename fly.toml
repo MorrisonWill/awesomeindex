@@ -47,6 +47,6 @@ timeout = '10s'
 grace_period = '30s'
 
 [[vm]]
-memory = '1gb'
+memory = '2gb'
 cpu_kind = 'shared'
 cpus = 1
