@@ -480,6 +480,10 @@ header {
     transition: all 0.2s;
 }
 
+.github-link-header:visited {
+    color: var(--text-muted);
+}
+
 .github-link-header:hover {
     color: var(--text);
     background: var(--hover);

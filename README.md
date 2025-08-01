@@ -35,7 +35,7 @@ libraries in various ecosystems.
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/awesomeindex.git
+git clone https://github.com/MorrisonWill/awesomeindex.git
 cd awesomeindex
 ```
 
