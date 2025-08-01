@@ -19,64 +19,60 @@
             </button>
         </div>
         <div class="filters" id="filters">
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>Sort:</label>
-                    <select name="sort" class="filter-select">
-                        <option value="relevance">Relevance</option>
-                        <option value="stars" selected>Most Stars</option>
-                        <option value="recent">Recently Updated</option>
-                        <option value="name">Alphabetical</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Repository:</label>
-                    <select name="repository" class="filter-select repository-filter">
-                        <option value="">All repositories</option>
-                        {% if filter_options %}
-                            {% for repo in filter_options.repositories %}
-                                <option value="{{ repo }}">
-                                    {% if repo.startswith('awesome-') %}
-                                        {{ repo[8:] }}
-                                    {% else %}
-                                        {{ repo }}
-                                    {% endif %}
-                                </option>
-                            {% endfor %}
-                        {% endif %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Language:</label>
-                    <select name="language" class="filter-select language-filter">
-                        <option value="">All languages</option>
-                        {% if filter_options %}
-                            {% for lang in filter_options.languages %}
-                                <option value="{{ lang }}">{{ lang }}</option>
-                            {% endfor %}
-                        {% endif %}
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Category:</label>
-                    <select name="category" class="filter-select category-filter">
-                        <option value="">All categories</option>
-                        {% if filter_options %}
-                            {% for cat in filter_options.categories %}
-                                <option value="{{ cat }}">{{ cat }}</option>
-                            {% endfor %}
-                        {% endif %}
-                    </select>
-                </div>
+            <div class="filter-group">
+                <label>Sort:</label>
+                <select name="sort" class="filter-select">
+                    <option value="relevance">Relevance</option>
+                    <option value="stars" selected>Stars</option>
+                    <option value="recent">Recent</option>
+                    <option value="name">A-Z</option>
+                </select>
             </div>
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>Min stars:</label>
-                    <input type="number" name="min_stars" value="0" min="0" class="filter-input" placeholder="0">
-                </div>
-                <div class="filter-group filter-presets">
-                    <button type="button" class="filter-preset" data-preset="clear">Clear Filters</button>
-                </div>
+            <div class="filter-group">
+                <label>Repo:</label>
+                <select name="repository" class="filter-select repository-filter">
+                    <option value="">All</option>
+                    {% if filter_options %}
+                        {% for repo in filter_options.repositories %}
+                            <option value="{{ repo }}">
+                                {% if repo.startswith('awesome-') %}
+                                    {{ repo[8:] }}
+                                {% else %}
+                                    {{ repo }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Lang:</label>
+                <select name="language" class="filter-select language-filter">
+                    <option value="">All</option>
+                    {% if filter_options %}
+                        {% for lang in filter_options.languages %}
+                            <option value="{{ lang }}">{{ lang }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Category:</label>
+                <select name="category" class="filter-select category-filter">
+                    <option value="">All</option>
+                    {% if filter_options %}
+                        {% for cat in filter_options.categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Min ★:</label>
+                <input type="number" name="min_stars" value="0" min="0" class="filter-input" placeholder="0">
+            </div>
+            <div class="filter-group filter-presets">
+                <button type="button" class="filter-preset" data-preset="clear">Clear</button>
             </div>
         </div>
     </form>
