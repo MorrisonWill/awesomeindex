@@ -82,11 +82,15 @@ app.include_router(projects.router)
 async def homepage(request: Request):
     # Fetch initial browse results to avoid flicker
     with Session(engine) as session:
-        # Get top 50 projects sorted by stars
+        # Get top 51 projects sorted by stars (one extra to check if there are more)
         statement = (
-            select(Project).order_by(Project.github_stars.desc()).offset(0).limit(50)
+            select(Project).order_by(Project.github_stars.desc()).offset(0).limit(51)
         )
         projects = session.exec(statement).all()
+        
+        # Check if there are more results
+        has_more_results = len(projects) > 50
+        projects = projects[:50]  # Trim to 50
 
         # Get total count
         total_count = session.exec(select(func.count(Project.id))).one()
@@ -125,7 +129,7 @@ async def homepage(request: Request):
             "hits": hits,
             "total": len(hits),  # Use deduplicated count for display
             "offset": 0,
-            "has_more": len(hits) >= 50,  # Check if we got the full limit
+            "has_more": has_more_results,  # Use the check from before deduplication
         }
 
         # Get filter options for server-side rendering

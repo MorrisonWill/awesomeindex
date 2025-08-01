@@ -85,7 +85,7 @@
     <div id="content" hx-indicator="#loading">
         {% if initial_results %}
             <!-- Render initial browse results server-side to avoid flicker -->
-            {% with results=initial_results, query="" %}
+            {% with results=initial_results, query=query, next_offset=next_offset, filters=filters %}
                 {% include "results.html" %}
             {% endwith %}
         {% else %}
